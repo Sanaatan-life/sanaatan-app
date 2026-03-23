@@ -238,6 +238,10 @@
 
   <script>
     const BACKEND = 'https://web-production-5799b.up.railway.app';
+const HEADERS = {
+  'Content-Type': 'application/json',
+  'Accept': 'application/json'};
+
     const chatArea = document.getElementById('chatArea');
     const input    = document.getElementById('questionInput');
     const sendBtn  = document.getElementById('sendBtn');
@@ -309,11 +313,13 @@
       chatArea.scrollTop = chatArea.scrollHeight;
     }
 
-    async function sendQuestion() {
-      const question = input.value.trim();
-      if (!question || sendBtn.disabled) return;
-
-      input.value = '';
+    aconst res = await fetch(BACKEND + '/ask', {
+  method: 'POST',
+  headers: HEADERS,
+  mode: 'cors',
+  body: JSON.stringify({ question, top_k: 5 })
+});
+= '';
       input.style.height = 'auto';
       sendBtn.disabled = true;
 
