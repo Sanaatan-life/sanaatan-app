@@ -212,7 +212,8 @@
         removeTyping();
         if (!res.ok) throw new Error('Status ' + res.status);
         const data = await res.json();
-        addMessage('assistant', data.answer || data.error || 'No response received.');
+        const answerText = data.answer || data.error || JSON.stringify(data);
+addMessage('assistant', answerText);
       } catch (err) {
         removeTyping();
         addError('Something went wrong connecting to the scriptures. Please try again.');
