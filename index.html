@@ -210,9 +210,16 @@
           body: JSON.stringify({ question: question, top_k: 5 })
         });
         removeTyping();
-        if (!res.ok) throw new Error('Status ' + res.status);
-        const data = await res.json();
-        const answerText = data.answer || data.error || JSON.stringify(data);
+        
+        removeTyping();
+const text = await res.text();
+let answerText;
+try {
+  const data = JSON.parse(text);
+  answerText = data.answer || data.error || text;
+} catch {
+  answerText = text;
+}
 addMessage('assistant', answerText);
       } catch (err) {
         removeTyping();
