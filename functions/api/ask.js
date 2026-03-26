@@ -10,7 +10,7 @@ export async function onRequestPost(context) {
     const ip = context.request.headers.get('CF-Connecting-IP') || 'unknown';
     const key = `rate:${ip}`;
     const now = Date.now();
-    const window = 60000; // 1 minute in ms
+    const window = 60000;
     const limit = 10;
 
     if (context.env.RATE_LIMIT_KV) {
@@ -34,7 +34,6 @@ export async function onRequestPost(context) {
       });
     }
 
-    // Proxy to Railway
     const body = await context.request.text();
     const upstream = await fetch(
       'https://web-production-5799b.up.railway.app/ask',
@@ -45,27 +44,4 @@ export async function onRequestPost(context) {
       }
     );
 
-    const result = await upstream.text();
-    return new Response(result, {
-      status: upstream.status,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
-
-  } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
-  }
-}
-
-export async function onRequestOptions() {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-    }
-  });
-}
+    const result​​​​​​​​​​​​​​​​
