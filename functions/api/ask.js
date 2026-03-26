@@ -6,16 +6,36 @@ export async function onRequestPost(context) {
   };
 
   try {
-    // Rate limiting using Cloudflare's built-in IP
+    // Rate limiting — 10 requests per minute per IP
     const ip = context.request.headers.get('CF-Connecting-IP') || 'unknown';
-    const rateLimitKey = `rate:${ip}`;
+    const key = `rate:${ip}`;
+    const now = Date.now();
+    const window = 60000; // 1 minute in ms
+    const limit = 10;
 
-    // Simple rate limit check using KV if available, otherwise skip
-    // Full rate limiting added in Step 4
+    if (context.env.RATE_LIMIT_KV) {
+      const raw = await context.env.RATE_LIMIT_KV.get(key);
+      const timestamps = raw ? JSON.parse(raw) : [];
+      const recent = timestamps.filter(t => now - t < window);
+
+      if (recent.length >= limit) {
+        return new Response(JSON.stringify({
+          error: 'Too many requests. Please wait a moment.',
+          status: 'rate_limited'
+        }), {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      recent.push(now);
+      await context.env.RATE_LIMIT_KV.put(key, JSON.stringify(recent), {
+        expirationTtl: 120
+      });
+    }
 
     // Proxy to Railway
     const body = await context.request.text();
-
     const upstream = await fetch(
       'https://web-production-5799b.up.railway.app/ask',
       {
@@ -26,7 +46,6 @@ export async function onRequestPost(context) {
     );
 
     const result = await upstream.text();
-
     return new Response(result, {
       status: upstream.status,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
