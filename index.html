@@ -30,7 +30,7 @@
     .chip{background:var(--warm-white);border:1px solid var(--border);border-radius:20px;padding:8px 16px;font-size:14px;color:var(--ink-soft);cursor:pointer;font-family:'Source Serif 4',serif;transition:all 0.2s;}
     .chip:hover{border-color:var(--gold);color:var(--gold);}
     .msg{display:flex;flex-direction:column;max-width:min(900px,96%);}
-    .msg.user{align-self:flex-end;}
+    .msg.user{align-self:flex-end;max-width:min(500px,75%);}
     .msg.assistant{align-self:flex-start;}
     .msg-label{font-size:11px;letter-spacing:0.15em;text-transform:uppercase;margin-bottom:6px;color:var(--muted);}
     .msg.user .msg-label{text-align:right;color:var(--gold);}
@@ -113,14 +113,23 @@
     function addTyping() {
       const d = document.createElement('div'); d.className = 'typing'; d.id = 'typing';
       d.innerHTML = '<div class="msg-label">Sanaatan</div><div class="typing-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>';
-      chatArea.appendChild(d); chatArea.scrollTop = chatArea.scrollHeight;
+      chatArea.appendChild(d); if(role === 'assistant') {
+  setTimeout(() => { div.scrollIntoView({ behavior:'smooth', block:'start' }); }, 100);
+} else {
+  chatArea.scrollTop = chatArea.scrollHeight;
+}
     }
 
     function removeTyping() { const t = document.getElementById('typing'); if (t) t.remove(); }
 
     function addError(msg) {
       const d = document.createElement('div'); d.className = 'error-msg'; d.textContent = msg;
-      chatArea.appendChild(d); chatArea.scrollTop = chatArea.scrollHeight;
+      chatArea.appendChild(d); if(role === 'assistant') {
+  setTimeout(() => { div.scrollIntoView({ behavior:'smooth', block:'start' }); }, 100);
+} else {
+  chatArea.scrollTop = chatArea.scrollHeight;
+}
+
     }
 
     async function sendQuestion() {
