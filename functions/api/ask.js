@@ -1,3 +1,27 @@
+// Simple in-memory rate limiter (per isolate)
+const ipRequests = new Map();
+
+function isRateLimited(ip) {
+  const now = Date.now();
+  const window = 60000;
+  const limit = 10;
+  
+  if (!ipRequests.has(ip)) {
+    ipRequests.set(ip, []);
+  }
+  
+  const timestamps = ipRequests.get(ip).filter(t => now - t < window);
+  
+  if (timestamps.length >= limit) {
+    ipRequests.set(ip, timestamps);
+    return true;
+  }
+  
+  timestamps.push(now);
+  ipRequests.set(ip, timestamps);
+  return false;
+}
+
 export async function onRequestPost(context) {
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -6,31 +30,15 @@ export async function onRequestPost(context) {
   };
 
   try {
-    // Rate limiting — 10 requests per minute per IP
     const ip = context.request.headers.get('CF-Connecting-IP') || 'unknown';
-    const key = `rate:${ip}`;
-    const now = Date.now();
-    const window = 60000;
-    const limit = 10;
-
-    if (context.env.RATE_LIMIT_KV) {
-      const raw = await context.env.RATE_LIMIT_KV.get(key);
-      const timestamps = raw ? JSON.parse(raw) : [];
-      const recent = timestamps.filter(t => now - t < window);
-
-      if (recent.length >= limit) {
-        return new Response(JSON.stringify({
-          error: 'Too many requests. Please wait a moment.',
-          status: 'rate_limited'
-        }), {
-          status: 429,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      }
-
-      recent.push(now);
-      await context.env.RATE_LIMIT_KV.put(key, JSON.stringify(recent), {
-        expirationTtl: 120
+    
+    if (isRateLimited(ip)) {
+      return new Response(JSON.stringify({
+        error: 'Too many requests. Please wait a moment.',
+        status: 'rate_limited'
+      }), {
+        status: 429,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
