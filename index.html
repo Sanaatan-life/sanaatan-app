@@ -106,9 +106,10 @@
   </footer>
   <script>
     const BACKEND = '';
-    const chatArea = document.getElementById('chatArea');
-    const input    = document.getElementById('questionInput');
-    const sendBtn  = document.getElementById('sendBtn');
+const chatArea = document.getElementById('chatArea');
+const input    = document.getElementById('questionInput');
+const sendBtn  = document.getElementById('sendBtn');
+window.addEventListener('load', () => input.focus());
 
     input.addEventListener('input', () => {
       sendBtn.disabled = input.value.trim().length === 0;
@@ -184,9 +185,10 @@
       chatArea.appendChild(d);
       if (role === 'assistant') {
         setTimeout(() => {
-          chatArea.scrollTop = d.offsetTop - 24;
-          setTimeout(() => addFollowupChips(), 300);
-        }, 100);
+          const top = d.getBoundingClientRect().top + chatArea.scrollTop - chatArea.getBoundingClientRect().top - 24;
+          chatArea.scrollTo({ top: top, behavior: 'smooth' });
+          setTimeout(() => addFollowupChips(), 400);
+        }, 200);
       } else {
         chatArea.scrollTop = chatArea.scrollHeight;
       }
