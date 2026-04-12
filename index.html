@@ -184,8 +184,8 @@
       chatArea.appendChild(d);
       if (role === 'assistant') {
         setTimeout(() => {
-          d.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          addFollowupChips();
+          d.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          setTimeout(() => addFollowupChips(), 300);
         }, 100);
       } else {
         chatArea.scrollTop = chatArea.scrollHeight;
