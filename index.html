@@ -33,12 +33,12 @@
     .chip:hover{border-color:var(--gold);color:var(--gold);}
     .msg{display:flex;flex-direction:column;max-width:min(720px,95%);width:100%;}
     .msg.user{align-self:flex-end;max-width:min(500px,72%);width:auto;}
-    .msg.assistant{align-self:flex-start;}
+    .msg.assistant{align-self:stretch;width:100%;}
     .msg-label{font-size:11px;letter-spacing:0.15em;text-transform:uppercase;margin-bottom:6px;color:var(--muted);}
     .msg.user .msg-label{text-align:right;color:var(--gold);}
     .msg-bubble{padding:14px 20px;border-radius:16px;font-size:16px;line-height:1.8;}
     .msg.user .msg-bubble{background:var(--user-bg);color:var(--user-text);border-top-right-radius:4px;font-family:'Playfair Display',serif;font-style:italic;}
-    .msg.assistant .msg-bubble{background:var(--warm-white);color:var(--ink-soft);border:1px solid var(--border);border-top-left-radius:4px;}
+    .msg.assistant .msg-bubble{background:var(--warm-white);color:var(--ink-soft);border:1px solid var(--border);border-top-left-radius:4px;width:100%;}
     .typing{align-self:flex-start;}
     .typing-dots{display:flex;gap:6px;align-items:center;background:var(--warm-white);border:1px solid var(--border);border-radius:16px;border-top-left-radius:4px;padding:14px 20px;}
     .dot{width:8px;height:8px;border-radius:50%;background:var(--gold);opacity:0.5;animation:typingPulse 1.3s ease-in-out infinite;}
