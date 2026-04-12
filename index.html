@@ -188,7 +188,6 @@ window.addEventListener('load', () => input.focus());
           addFollowupChips();
           setTimeout(() => {
             const top = d.getBoundingClientRect().top + chatArea.scrollTop - chatArea.getBoundingClientRect().top - 24;
-            console.log('d.offsetTop:', d.offsetTop, 'chatArea.scrollTop:', chatArea.scrollTop, 'calculated top:', top);
             chatArea.scrollTo({ top: top, behavior: 'smooth' });
           }, 100);
         }, 200);
