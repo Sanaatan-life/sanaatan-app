@@ -185,9 +185,11 @@ window.addEventListener('load', () => input.focus());
       chatArea.appendChild(d);
       if (role === 'assistant') {
         setTimeout(() => {
-          const top = d.getBoundingClientRect().top + chatArea.scrollTop - chatArea.getBoundingClientRect().top - 24;
-          chatArea.scrollTo({ top: top, behavior: 'smooth' });
-          setTimeout(() => addFollowupChips(), 400);
+          addFollowupChips();
+          setTimeout(() => {
+            const top = d.getBoundingClientRect().top + chatArea.scrollTop - chatArea.getBoundingClientRect().top - 24;
+            chatArea.scrollTo({ top: top, behavior: 'smooth' });
+          }, 100);
         }, 200);
       } else {
         chatArea.scrollTop = chatArea.scrollHeight;
