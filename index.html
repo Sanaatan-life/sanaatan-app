@@ -233,15 +233,15 @@
 }
 
     async function ensureProfile() {
-      const { data } = await sb.from('user_profiles').select('id').eq('id', currentUser.id).single();
+      const { data } = await sb.from('user_profiles').select('id').eq('id', currentUser.id).maybeSingle();
       if (!data) {
-        await sb.from('user_profiles').insert({
+        await sb.from('user_profiles').upsert({
           id: currentUser.id,
           email: currentUser.email,
           tier: 'free',
           questions_today: 0,
           last_question_date: today()
-        });
+        }, { onConflict: 'id' });
       }
     }
 
