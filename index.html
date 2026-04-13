@@ -206,12 +206,12 @@
         emailEl.textContent = currentUser.email;
         btnEl.textContent   = 'Sign out';
         btnEl.className     = 'auth-btn outline';
-        btnEl.setAttribute('data-mode', 'signout');
+        btnEl.onclick       = () => signOut();
       } else {
         emailEl.textContent = '';
         btnEl.textContent   = 'Sign in';
         btnEl.className     = 'auth-btn';
-        btnEl.setAttribute('data-mode', 'signin');
+        btnEl.onclick       = () => showAuthModal();
       }
     }
 
