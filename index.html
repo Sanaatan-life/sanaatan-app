@@ -144,7 +144,7 @@
       <p id="modalSubtext">Sign in to save your questions and get 3 free answers every day.</p>
       <div id="modalError" class="modal-error" style="display:none;"></div>
       <input class="modal-input" type="email" id="modalEmail" placeholder="Your email address" />
-      <input class="modal-input" type="password" id="modalPassword" placeholder="Password" />
+      <input class="modal-input" type="password" id="modalPassword" placeholder="Password" onkeydown="if(event.key==='Enter') handleAuth()" />
       <button class="modal-btn" onclick="handleAuth()">Sign in</button>
       <button class="modal-btn secondary" onclick="closeAuthModal()">Maybe later</button>
       <p class="modal-switch" onclick="toggleAuthMode()">No account? <span>Create one free</span></p>
