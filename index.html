@@ -334,16 +334,15 @@
     }
 
     async function signOut() {
-      try {
-        await sb.auth.signOut();
-      } catch(e) {
-        console.log('Sign out error:', e);
-      } finally {
-        currentUser = null;
-        questionsUsed = 0;
-        localStorage.clear();
-        window.location.reload();
-      }
+      currentUser = null;
+      questionsUsed = 0;
+      localStorage.clear();
+      sessionStorage.clear();
+      document.cookie.split(";").forEach(c => {
+        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+      });
+      try { await sb.auth.signOut(); } catch(e) {}
+      window.location.href = 'https://app.sanaatan.life';
     }
 async function signInWithGoogle() {
   const { error } = await sb.auth.signInWithOAuth({
