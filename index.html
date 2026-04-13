@@ -478,8 +478,8 @@ async function signInWithGoogle() {
 
       if (!canAsk()) {
         if (!currentUser) {
-          document.getElementById('modalTitle').textContent = 'Continue your journey';
-          document.getElementById('modalSubtext').textContent = 'You\'ve seen what Sanaatan can do. Sign in free to ask 3 questions every day.';
+          document.getElementById('modalTitle').textContent = 'Sign in to continue';
+          document.getElementById('modalSubtext').textContent = 'You\'ve used your 1 free preview question. Sign in or create a free account to ask 3 questions every day — no payment needed.';
           showAuthModal();
         } else {
           showUpgradeBanner();
