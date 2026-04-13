@@ -266,6 +266,7 @@
 
     async function incrementCount() {
       questionsUsed++;
+      console.log('incrementCount called, currentUser:', currentUser?.email, 'questionsUsed:', questionsUsed);
       if (currentUser) {
         await sb.from('user_profiles').update({ questions_today: questionsUsed, last_question_date: today() }).eq('id', currentUser.id);
       } else {
