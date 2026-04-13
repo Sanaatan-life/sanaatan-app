@@ -280,6 +280,7 @@
 
     function canAsk() {
       if (isUnlimited()) return true;
+      if (!currentUser && questionsUsed >= 1) return false;
       return questionsUsed < FREE_LIMIT;
     }
 
@@ -456,7 +457,13 @@
       if (!question || sendBtn.disabled) return;
 
       if (!canAsk()) {
-        showUpgradeBanner();
+        if (!currentUser) {
+          document.getElementById('modalTitle').textContent = 'Continue your journey';
+          document.getElementById('modalSubtext').textContent = 'You\'ve seen what Sanaatan can do. Sign in free to ask 3 questions every day.';
+          showAuthModal();
+        } else {
+          showUpgradeBanner();
+        }
         return;
       }
 
