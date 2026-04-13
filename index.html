@@ -175,6 +175,13 @@
     const counter    = document.getElementById('questionCounter');
 
     window.addEventListener('load', () => input.focus());
+    document.getElementById('authBtnHeader').addEventListener('click', function() {
+  if (currentUser) {
+    signOut();
+  } else {
+    showAuthModal();
+  }
+});
 
     // ── AUTH STATE ─────────────────────────────────────────────────────────────
     sb.auth.onAuthStateChange(async (event, session) => {
@@ -200,20 +207,18 @@
     }
 
     function updateHeader() {
-      const emailEl = document.getElementById('userEmail');
-      const btnEl   = document.getElementById('authBtnHeader');
-      if (currentUser) {
-        emailEl.textContent = currentUser.email;
-        btnEl.textContent   = 'Sign out';
-        btnEl.className     = 'auth-btn outline';
-        btnEl.onclick       = () => signOut();
-      } else {
-        emailEl.textContent = '';
-        btnEl.textContent   = 'Sign in';
-        btnEl.className     = 'auth-btn';
-        btnEl.onclick       = () => showAuthModal();
-      }
-    }
+  const emailEl = document.getElementById('userEmail');
+  const btnEl   = document.getElementById('authBtnHeader');
+  if (currentUser) {
+    emailEl.textContent = currentUser.email;
+    btnEl.textContent   = 'Sign out';
+    btnEl.className     = 'auth-btn outline';
+  } else {
+    emailEl.textContent = '';
+    btnEl.textContent   = 'Sign in';
+    btnEl.className     = 'auth-btn';
+  }
+}
 
     async function ensureProfile() {
       const { data } = await sb.from('user_profiles').select('id').eq('id', currentUser.id).single();
@@ -264,7 +269,6 @@
 
     async function incrementCount() {
       questionsUsed++;
-      console.log('incrementCount called, currentUser:', currentUser?.email, 'questionsUsed:', questionsUsed);
       if (currentUser) {
         await sb.from('user_profiles').update({ questions_today: questionsUsed, last_question_date: today() }).eq('id', currentUser.id);
       } else {
