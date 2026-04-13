@@ -202,16 +202,18 @@
     function updateHeader() {
       const emailEl = document.getElementById('userEmail');
       const btnEl   = document.getElementById('authBtnHeader');
+      const newBtn  = btnEl.cloneNode(true);
+      btnEl.parentNode.replaceChild(newBtn, btnEl);
       if (currentUser) {
-        emailEl.textContent = currentUser.email;
-        btnEl.textContent   = 'Sign out';
-        btnEl.onclick       = signOut;
-        btnEl.className     = 'auth-btn outline';
+        emailEl.textContent   = currentUser.email;
+        newBtn.textContent    = 'Sign out';
+        newBtn.className      = 'auth-btn outline';
+        newBtn.addEventListener('click', signOut);
       } else {
-        emailEl.textContent = '';
-        btnEl.textContent   = 'Sign in';
-        btnEl.onclick       = showAuthModal;
-        btnEl.className     = 'auth-btn';
+        emailEl.textContent   = '';
+        newBtn.textContent    = 'Sign in';
+        newBtn.className      = 'auth-btn';
+        newBtn.addEventListener('click', showAuthModal);
       }
     }
 
