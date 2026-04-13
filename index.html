@@ -344,6 +344,7 @@
       }
     }
 async function signInWithGoogle() {
+  console.log('Google sign in clicked');
   const { error } = await sb.auth.signInWithOAuth({
     provider: 'google',
     options: {
