@@ -310,7 +310,11 @@
 
     async function signOut() {
       await sb.auth.signOut();
+      currentUser = null;
       questionsUsed = 0;
+      localStorage.setItem('q_today', '0');
+      localStorage.setItem('q_date', today());
+      updateHeader();
       updateCounter();
     }
 
