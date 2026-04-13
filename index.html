@@ -184,13 +184,15 @@
     const sendBtn    = document.getElementById('sendBtn');
     const counter    = document.getElementById('questionCounter');
 
-    window.addEventListener('load', () => input.focus());
-    document.getElementById('authBtnHeader').addEventListener('click', function() {
-  if (currentUser) {
-    signOut();
-  } else {
-    showAuthModal();
-  }
+    window.addEventListener('load', () => {
+  input.focus();
+  document.getElementById('authBtnHeader').addEventListener('click', function() {
+    if (currentUser) {
+      signOut();
+    } else {
+      showAuthModal();
+    }
+  });
 });
 
     // ── AUTH STATE ─────────────────────────────────────────────────────────────
