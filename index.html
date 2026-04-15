@@ -96,9 +96,9 @@
     /* UPGRADE BANNER */
     .upgrade-banner{max-width:720px;width:100%;margin:0 auto;background:#FFF3DC;border:1.5px solid var(--gold);border-radius:10px;padding:16px 20px;text-align:center;}
     .upgrade-banner p{font-size:15px;color:var(--ink-soft);margin-bottom:10px;}
-    .upgrade-banner a{display:inline-block;background:var(--gold);color:white;border-radius:8px;padding:8px 20px;font-size:14px;text-decoration:none;font-weight:600;}
-.google-btn{background:white;color:#3c4043;border:1px solid #dadce0;display:flex;align-items:center;justify-content:center;font-family:'Source Serif 4',serif;font-size:15px;}
-.google-btn:hover{background:#f8f9fa;box-shadow:0 1px 3px rgba(0,0,0,0.1);}
+    .upgrade-banner a{display:inline-block;background:var(--gold);color:white;border-radius:8px;padding:8px 20px;font-size:14px;text-decoration:none;font-weight:600;margin:4px;}
+    .google-btn{background:white;color:#3c4043;border:1px solid #dadce0;display:flex;align-items:center;justify-content:center;font-family:'Source Serif 4',serif;font-size:15px;}
+    .google-btn:hover{background:#f8f9fa;box-shadow:0 1px 3px rgba(0,0,0,0.1);}
     @keyframes typingPulse{0%,100%{opacity:0.3;transform:scale(0.8)}50%{opacity:1;transform:scale(1.1)}}
     @media(max-width:520px){header{padding:10px 16px;}#chatArea{padding:16px 12px;}footer{padding:10px 12px 16px;}}
   </style>
@@ -163,37 +163,35 @@
 
   <script>
     // ── SUPABASE ───────────────────────────────────────────────────────────────
-    const SUPABASE_URL  = 'https://yltspoklrdezjkyqnyhb.supabase.co';
-    const SUPABASE_KEY  = 'sb_publishable_EimBxqU8TjTuBnNwvVLL_Q_qE5UCh1w';
+    const SUPABASE_URL = 'https://yltspoklrdezjkyqnyhb.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_EimBxqU8TjTuBnNwvVLL_Q_qE5UCh1w';
     const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
-        flowType: 'implicit'
+        flowType: 'pkce',
+        lock: undefined
       }
     });
 
-    const FREE_LIMIT = 3;
-    let currentUser  = null;
-    let authMode     = 'signin'; // or 'signup'
+    const FREE_LIMIT  = 3;
+    let currentUser   = null;
+    let authMode      = 'signin';
     let questionsUsed = 0;
+    let cachedTier    = 'free'; // FIX 1: cached tier avoids async issues
 
-    const chatArea   = document.getElementById('chatArea');
-    const input      = document.getElementById('questionInput');
-    const sendBtn    = document.getElementById('sendBtn');
-    const counter    = document.getElementById('questionCounter');
+    const chatArea = document.getElementById('chatArea');
+    const input    = document.getElementById('questionInput');
+    const sendBtn  = document.getElementById('sendBtn');
+    const counter  = document.getElementById('questionCounter');
 
     window.addEventListener('load', () => {
-  input.focus();
-  document.getElementById('authBtnHeader').addEventListener('click', function() {
-    if (currentUser) {
-      signOut();
-    } else {
-      showAuthModal();
-    }
-  });
-});
+      input.focus();
+      document.getElementById('authBtnHeader').addEventListener('click', function() {
+        if (currentUser) { signOut(); } else { showAuthModal(); }
+      });
+    });
 
     // ── AUTH STATE ─────────────────────────────────────────────────────────────
     sb.auth.onAuthStateChange(async (event, session) => {
@@ -203,6 +201,7 @@
         await ensureProfile();
         await loadQuestionCount();
       } else {
+        cachedTier = 'free';
         questionsUsed = parseInt(localStorage.getItem('q_today') || '0');
         const lastDate = localStorage.getItem('q_date');
         if (lastDate !== today()) {
@@ -219,18 +218,18 @@
     }
 
     function updateHeader() {
-  const emailEl = document.getElementById('userEmail');
-  const btnEl   = document.getElementById('authBtnHeader');
-  if (currentUser) {
-    emailEl.textContent = currentUser.email;
-    btnEl.textContent   = 'Sign out';
-    btnEl.className     = 'auth-btn outline';
-  } else {
-    emailEl.textContent = '';
-    btnEl.textContent   = 'Sign in';
-    btnEl.className     = 'auth-btn';
-  }
-}
+      const emailEl = document.getElementById('userEmail');
+      const btnEl   = document.getElementById('authBtnHeader');
+      if (currentUser) {
+        emailEl.textContent = currentUser.email;
+        btnEl.textContent   = 'Sign out';
+        btnEl.className     = 'auth-btn outline';
+      } else {
+        emailEl.textContent = '';
+        btnEl.textContent   = 'Sign in';
+        btnEl.className     = 'auth-btn';
+      }
+    }
 
     async function ensureProfile() {
       const { data } = await sb.from('user_profiles').select('id').eq('id', currentUser.id).maybeSingle();
@@ -245,11 +244,31 @@
       }
     }
 
+    // FIX 1: loadUserTier caches tier synchronously so isUnlimited() works without async
+    async function loadUserTier() {
+      if (!currentUser) { cachedTier = 'free'; return; }
+      const { data } = await sb.from('user_profiles')
+        .select('tier')
+        .eq('id', currentUser.id)
+        .single();
+      cachedTier = data?.tier || 'free';
+      updateCounter();
+    }
+
+    function getUserTier() {
+      return cachedTier;
+    }
+
+    function isUnlimited() {
+      return ['unlimited', 'annual', 'daily'].includes(cachedTier);
+    }
+
     async function loadQuestionCount() {
       const { data } = await sb.from('user_profiles')
         .select('questions_today, last_question_date, tier')
         .eq('id', currentUser.id).single();
       if (data) {
+        cachedTier = data.tier || 'free'; // FIX 1: cache tier when loading count
         if (data.last_question_date !== today()) {
           questionsUsed = 0;
           await sb.from('user_profiles').update({ questions_today: 0, last_question_date: today() }).eq('id', currentUser.id);
@@ -258,15 +277,6 @@
         }
       }
       updateCounter();
-    }
-
-    function getUserTier() {
-      return 'free'; // expand when payments integrated
-    }
-
-    function isUnlimited() {
-      const tier = getUserTier();
-      return tier === 'unlimited' || tier === 'annual' || tier === 'daily';
     }
 
     function updateCounter() {
@@ -279,21 +289,33 @@
       counter.style.color = remaining === 0 ? '#B71C1C' : 'var(--muted)';
     }
 
+    // FIX 3: session check before Supabase write prevents silent failures
     async function incrementCount() {
       questionsUsed++;
+      updateCounter(); // FIX 1: update counter immediately in UI
       if (currentUser) {
-        await sb.from('user_profiles').update({ questions_today: questionsUsed, last_question_date: today() }).eq('id', currentUser.id);
+        try {
+          const { data: sessionData } = await sb.auth.getSession();
+          if (!sessionData?.session) return;
+          const { error } = await sb.from('user_profiles')
+            .update({
+              questions_today: questionsUsed,
+              last_question_date: today()
+            })
+            .eq('id', currentUser.id);
+          if (error) console.error('Count update failed:', error.message);
+        } catch(e) {
+          console.error('incrementCount error:', e);
+        }
       } else {
         localStorage.setItem('q_today', questionsUsed.toString());
         localStorage.setItem('q_date', today());
       }
-      updateCounter();
     }
 
     function canAsk() {
       if (isUnlimited()) return true;
-      if (!currentUser && questionsUsed >= 1) return false;
-      return questionsUsed < FREE_LIMIT;
+      return questionsUsed < FREE_LIMIT; // FIX 2: non-users also get 3 questions
     }
 
     // ── AUTH MODAL ─────────────────────────────────────────────────────────────
@@ -334,8 +356,9 @@
     }
 
     async function signOut() {
-      currentUser = null;
+      currentUser   = null;
       questionsUsed = 0;
+      cachedTier    = 'free';
       localStorage.clear();
       sessionStorage.clear();
       document.cookie.split(";").forEach(c => {
@@ -344,15 +367,15 @@
       try { await sb.auth.signOut(); } catch(e) {}
       window.location.href = 'https://app.sanaatan.life';
     }
-async function signInWithGoogle() {
-  const { error } = await sb.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      redirectTo: 'https://app.sanaatan.life'
+
+    async function signInWithGoogle() {
+      const { error } = await sb.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: 'https://app.sanaatan.life' }
+      });
+      if (error) console.error('Google sign in error:', error);
     }
-  });
-  if (error) console.error('Google sign in error:', error);
-}
+
     // ── CHAT ───────────────────────────────────────────────────────────────────
     input.addEventListener('input', () => {
       sendBtn.disabled = input.value.trim().length === 0;
@@ -399,14 +422,18 @@ async function signInWithGoogle() {
       chatArea.appendChild(container);
     }
 
+    // FIX 2: upgrade banner links directly to Razorpay — no homepage redirect
     function showUpgradeBanner() {
       const existing = document.getElementById('upgrade-banner');
       if (existing) return;
       const d = document.createElement('div');
       d.className = 'upgrade-banner';
       d.id = 'upgrade-banner';
-      d.innerHTML = `<p>You've used all 3 free questions for today. Come back tomorrow or upgrade for unlimited access.</p>
-        <a href="https://sanaatan.life#pricing" target="_blank">See plans →</a>`;
+      d.innerHTML = `
+        <p>You've used all 3 free questions for today. Come back tomorrow, or upgrade for more.</p>
+        <a href="https://rzp.io/rzp/SntDwUYi" target="_blank">Daily ₹299 →</a>
+        <a href="https://rzp.io/rzp/SntDwUYi" target="_blank">Unlimited ₹499 →</a>
+        <a href="https://rzp.io/rzp/SntDwUYi" target="_blank">Annual ₹2,999 →</a>`;
       chatArea.appendChild(d);
       chatArea.scrollTop = chatArea.scrollHeight;
     }
@@ -478,7 +505,7 @@ async function signInWithGoogle() {
       if (!canAsk()) {
         if (!currentUser) {
           document.getElementById('modalTitle').textContent = 'Sign in to continue';
-          document.getElementById('modalSubtext').textContent = 'You\'ve used your 1 free preview question. Sign in or create a free account to ask 3 questions every day — no payment needed.';
+          document.getElementById('modalSubtext').textContent = 'You\'ve used your 3 free questions today. Sign in or create a free account — your 3 daily questions reset every day.';
           showAuthModal();
         } else {
           showUpgradeBanner();
