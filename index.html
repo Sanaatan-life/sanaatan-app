@@ -361,17 +361,19 @@ sb.auth.onAuthStateChange(async (event, session) => {
     }
 
     async function signOut() {
-      currentUser   = null;
-      questionsUsed = 0;
-      cachedTier    = 'free';
-      localStorage.clear();
-      sessionStorage.clear();
-      document.cookie.split(";").forEach(c => {
-        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-      });
-      try { await sb.auth.signOut(); } catch(e) {}
-      window.location.href = 'https://app.sanaatan.life';
-    }
+  currentUser   = null;
+  questionsUsed = 0;
+  cachedTier    = 'free';
+  updateHeader();
+  updateCounter();
+  localStorage.clear();
+  sessionStorage.clear();
+  document.cookie.split(";").forEach(c => {
+    document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+  });
+  sb.auth.signOut().catch(() => {}); // fire and forget — don't await
+  window.location.href = 'https://app.sanaatan.life';
+}
 
     async function signInWithGoogle() {
       const { error } = await sb.auth.signInWithOAuth({
