@@ -166,14 +166,13 @@
     const SUPABASE_URL = 'https://yltspoklrdezjkyqnyhb.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_EimBxqU8TjTuBnNwvVLL_Q_qE5UCh1w';
     const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true,
-        flowType: 'pkce',
-        lock: undefined
-      }
-    });
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    flowType: 'implicit'
+  }
+});
 
     const FREE_LIMIT  = 3;
     let currentUser   = null;
