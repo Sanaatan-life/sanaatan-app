@@ -214,6 +214,17 @@ function handleAuthBtn() {
         updateCounter();
       }
     });
+    // Explicit session check on page load — handles OAuth redirect case
+(async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session?.user && !currentUser) {
+    currentUser = session.user;
+    updateHeader();
+    await ensureProfile();
+    await new Promise(resolve => setTimeout(resolve, 500));
+    await loadQuestionCount();
+  }
+})();
 
     function today() {
       return new Date().toISOString().split('T')[0];
