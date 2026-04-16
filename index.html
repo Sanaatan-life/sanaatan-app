@@ -194,36 +194,34 @@ function handleAuthBtn() {
 }
 
     // ── AUTH STATE ─────────────────────────────────────────────────────────────
-    sb.auth.onAuthStateChange(async (event, session) => {
-  currentUser = session?.user || null;
-  updateHeader();
-  if (currentUser) {
-    await ensureProfile();
-    await new Promise(resolve => setTimeout(resolve, 500));
-    await loadQuestionCount();
-  } else {
-        cachedTier = 'free';
-        questionsUsed = parseInt(localStorage.getItem('q_today') || '0');
-        const lastDate = localStorage.getItem('q_date');
-        if (lastDate !== today()) {
-          questionsUsed = 0;
-          localStorage.setItem('q_today', '0');
-          localStorage.setItem('q_date', today());
-        }
-        updateCounter();
-      }
-    });
-    // Explicit session check on page load — handles OAuth redirect case
-(async () => {
-  const { data: { session } } = await sb.auth.getSession();
-  if (session?.user && !currentUser) {
+sb.auth.onAuthStateChange(async (event, session) => {
+  console.log('Auth event:', event, 'user:', session?.user?.email);
+  if (event === 'SIGNED_OUT') {
+    currentUser = null;
+    cachedTier = 'free';
+    questionsUsed = 0;
+    updateHeader();
+    updateCounter();
+    return;
+  }
+  if (session?.user) {
     currentUser = session.user;
     updateHeader();
     await ensureProfile();
-    await new Promise(resolve => setTimeout(resolve, 500));
     await loadQuestionCount();
+  } else {
+    currentUser = null;
+    cachedTier = 'free';
+    questionsUsed = parseInt(localStorage.getItem('q_today') || '0');
+    const lastDate = localStorage.getItem('q_date');
+    if (lastDate !== today()) {
+      questionsUsed = 0;
+      localStorage.setItem('q_today', '0');
+      localStorage.setItem('q_date', today());
+    }
+    updateCounter();
   }
-})();
+});
 
     function today() {
       return new Date().toISOString().split('T')[0];
