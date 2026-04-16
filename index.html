@@ -289,14 +289,16 @@ function handleAuthBtn() {
 }
 
     function updateCounter() {
-      if (isUnlimited()) {
-        counter.textContent = '';
-        return;
-      }
-      const remaining = Math.max(0, FREE_LIMIT - questionsUsed);
-      counter.textContent = `${remaining} free question${remaining !== 1 ? 's' : ''} remaining today`;
-      counter.style.color = remaining === 0 ? '#B71C1C' : 'var(--muted)';
-    }
+  console.log('updateCounter called — isUnlimited:', isUnlimited(), 'cachedTier:', cachedTier, 'questionsUsed:', questionsUsed);
+  if (isUnlimited()) {
+    counter.textContent = '';
+    return;
+  }
+  const remaining = Math.max(0, FREE_LIMIT - questionsUsed);
+  counter.textContent = `${remaining} free question${remaining !== 1 ? 's' : ''} remaining today`;
+  counter.style.color = remaining === 0 ? '#B71C1C' : 'var(--muted)';
+  console.log('counter text set to:', counter.textContent);
+}
 
     // FIX 3: session check before Supabase write prevents silent failures
     async function incrementCount() {
