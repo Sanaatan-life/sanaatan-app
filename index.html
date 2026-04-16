@@ -109,7 +109,7 @@
     <div class="brand-text"><h1>SANAATAN</h1><p>सनातन · The Eternal Way</p></div>
     <a href="https://sanaatan.life" class="home-btn" title="Home">🏠</a>
     <span id="userEmail" class="user-email"></span>
-    <button id="authBtnHeader" class="auth-btn">Sign in</button>
+    <button id="authBtnHeader" class="auth-btn" onclick="handleAuthBtn()">Sign in</button>
     <span class="beta-badge">Beta</span>
   </header>
 
@@ -187,11 +187,12 @@
     const counter  = document.getElementById('questionCounter');
 
     window.addEventListener('load', () => {
-      input.focus();
-      document.getElementById('authBtnHeader').addEventListener('click', function() {
-        if (currentUser) { signOut(); } else { showAuthModal(); }
-      });
-    });
+  input.focus();
+});
+
+function handleAuthBtn() {
+  if (currentUser) { signOut(); } else { showAuthModal(); }
+};
 
     // ── AUTH STATE ─────────────────────────────────────────────────────────────
     sb.auth.onAuthStateChange(async (event, session) => {
@@ -264,20 +265,27 @@
     }
 
     async function loadQuestionCount() {
-      const { data } = await sb.from('user_profiles')
-        .select('questions_today, last_question_date, tier')
-        .eq('id', currentUser.id).single();
-      if (data) {
-        cachedTier = data.tier || 'free'; // FIX 1: cache tier when loading count
-        if (data.last_question_date !== today()) {
-          questionsUsed = 0;
-          await sb.from('user_profiles').update({ questions_today: 0, last_question_date: today() }).eq('id', currentUser.id);
-        } else {
-          questionsUsed = data.questions_today || 0;
-        }
-      }
-      updateCounter();
-    }
+  const { data, error } = await sb.from('user_profiles')
+    .select('questions_today, last_question_date, tier')
+    .eq('id', currentUser.id).single();
+  if (error || !data) {
+    cachedTier = 'free';
+    questionsUsed = 0;
+    updateCounter();
+    return;
+  }
+  cachedTier = data.tier || 'free';
+  if (data.last_question_date !== today()) {
+    questionsUsed = 0;
+    await sb.from('user_profiles').update({ 
+      questions_today: 0, 
+      last_question_date: today() 
+    }).eq('id', currentUser.id);
+  } else {
+    questionsUsed = data.questions_today || 0;
+  }
+  updateCounter();
+}
 
     function updateCounter() {
       if (isUnlimited()) {
