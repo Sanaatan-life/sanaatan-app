@@ -254,25 +254,12 @@ sb.auth.onAuthStateChange(async (event, session) => {
     }
 
     // FIX 1: loadUserTier caches tier synchronously so isUnlimited() works without async
-    async function loadUserTier() {
-      if (!currentUser) { cachedTier = 'free'; return; }
-      const { data } = await sb.from('user_profiles')
-        .select('tier')
-        .eq('id', currentUser.id)
-        .single();
-      cachedTier = data?.tier || 'free';
-      updateCounter();
-    }
-
-    function getUserTier() {
-      return cachedTier;
-    }
 
     function isUnlimited() {
       return ['unlimited', 'annual', 'daily'].includes(cachedTier);
     }
 
-    aasync function loadQuestionCount() {
+    async function loadQuestionCount() {
   counter.textContent = 'Loading...';
   counter.style.color = 'var(--muted)';
   const { data, error } = await sb.from('user_profiles')
@@ -298,7 +285,6 @@ sb.auth.onAuthStateChange(async (event, session) => {
 }
 
     function updateCounter() {
-  console.log('updateCounter called — isUnlimited:', isUnlimited(), 'cachedTier:', cachedTier, 'questionsUsed:', questionsUsed);
   if (isUnlimited()) {
     counter.textContent = '';
     return;
@@ -450,9 +436,9 @@ sb.auth.onAuthStateChange(async (event, session) => {
       d.id = 'upgrade-banner';
       d.innerHTML = `
         <p>You've used all 3 free questions for today. Come back tomorrow, or upgrade for more.</p>
-        <a href="https://rzp.io/rzp/SntDwUYi" target="_blank">Daily ₹299 →</a>
-        <a href="https://rzp.io/rzp/SntDwUYi" target="_blank">Unlimited ₹499 →</a>
-        <a href="https://rzp.io/rzp/SntDwUYi" target="_blank">Annual ₹2,999 →</a>`;
+        <a href="https://rzp.io/rzp/2NowaMx" target="_blank">Daily ₹299 →</a>
+        <a href="https://rzp.io/rzp/apoetBwM" target="_blank">Unlimited ₹499 →</a>
+        <a href="https://rzp.io/rzp/hlZLeN68" target="_blank">Annual ₹2,999 →</a>`;
       chatArea.appendChild(d);
       chatArea.scrollTop = chatArea.scrollHeight;
     }
