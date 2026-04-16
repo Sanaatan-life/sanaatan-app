@@ -192,16 +192,17 @@
 
 function handleAuthBtn() {
   if (currentUser) { signOut(); } else { showAuthModal(); }
-};
+}
 
     // ── AUTH STATE ─────────────────────────────────────────────────────────────
     sb.auth.onAuthStateChange(async (event, session) => {
-      currentUser = session?.user || null;
-      updateHeader();
-      if (currentUser) {
-        await ensureProfile();
-        await loadQuestionCount();
-      } else {
+  currentUser = session?.user || null;
+  updateHeader();
+  if (currentUser) {
+    await ensureProfile();
+    await new Promise(resolve => setTimeout(resolve, 500));
+    await loadQuestionCount();
+  } else {
         cachedTier = 'free';
         questionsUsed = parseInt(localStorage.getItem('q_today') || '0');
         const lastDate = localStorage.getItem('q_date');
