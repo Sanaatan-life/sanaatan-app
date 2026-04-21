@@ -537,7 +537,7 @@ sb.auth.onAuthStateChange(async (event, session) => {
         const res = await fetch('/api/ask', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ question, top_k: 5 })
+          body: JSON.stringify({ question, top_k: 5, user_id: currentUser?.id || "" })
         });
         removeTyping();
         const text = await res.text();
