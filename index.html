@@ -690,10 +690,10 @@ async function sendQuestion() {
   const question = input.value.trim();
   if (!question || sendBtn.disabled) return;
 
-  // Block guest after 1 question
+  // Intercept guest on 2nd question attempt
   if (!currentUser && questionsUsed >= 1) {
-    document.getElementById('modalTitle').textContent = 'Continue your journey';
-    document.getElementById('modalSubtext').textContent = 'Create a free account to ask more questions. You get 3 free questions every day — they reset at midnight.';
+    document.getElementById('modalTitle').textContent = 'Your next question awaits';
+    document.getElementById('modalSubtext').textContent = 'Sign in or create a free account to continue. You get 3 free questions every day.';
     showAuthModal();
     return;
   }
@@ -725,15 +725,6 @@ async function sendQuestion() {
     } catch { answer = text; }
     addMessage('assistant', answer);
     await incrementCount();
-
-    // After answer delivered — show sign-in modal for guests
-    if (!currentUser) {
-      setTimeout(() => {
-        document.getElementById('modalTitle').textContent = 'Continue your journey';
-        document.getElementById('modalSubtext').textContent = 'Create a free account to ask more questions. You get 3 free questions every day — they reset at midnight.';
-        showAuthModal();
-      }, 1500);
-    }
 
   } catch (err) {
     removeTyping();
