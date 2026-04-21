@@ -109,9 +109,9 @@
     @keyframes typingPulse{0%,100%{opacity:0.3;transform:scale(0.8)}50%{opacity:1;transform:scale(1.1)}}
     @media(max-width:520px){header{padding:10px 16px;}#chatArea{padding:16px 12px;}footer{padding:10px 12px 16px;}}
 /* SHARE CARD BUTTON */
-    .share-btn{display:inline-flex;align-items:center;gap:6px;margin-top:12px;background:transparent;border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:12px;color:var(--muted);cursor:pointer;font-family:'Source Serif 4',serif;transition:all 0.2s;}
-    .share-btn:hover{border-color:var(--gold);color:var(--gold);}
-    #shareCanvas{display:none;}
+    /* SHARE BUTTON */
+    .share-btn{display:flex;align-items:center;gap:6px;align-self:flex-end;margin-top:10px;background:var(--gold);border:none;border-radius:20px;padding:7px 16px;font-size:12px;color:white;cursor:pointer;font-family:'Source Serif 4',serif;letter-spacing:0.04em;transition:background 0.2s;}
+    .share-btn:hover{background:var(--gold-mid);}
   </style>
 </head>
 <body>
@@ -486,7 +486,7 @@ sb.auth.onAuthStateChange(async (event, session) => {
   if (role === 'assistant') {
     const shareBtn = document.createElement('button');
     shareBtn.className = 'share-btn';
-    shareBtn.innerHTML = '&#x2B06; Share this answer';
+    shareBtn.innerHTML = '&#x2B06; Share';
     shareBtn.onclick = () => generateShareCard(text);
     d.appendChild(shareBtn);
   }
@@ -515,70 +515,83 @@ function generateShareCard(text) {
   ctx.fillStyle = '#1C1208';
   ctx.fillRect(0, 0, W, H);
 
-  // Subtle border
+  // Border
   ctx.strokeStyle = '#8B6000';
   ctx.lineWidth = 3;
   ctx.strokeRect(32, 32, W - 64, H - 64);
 
-  // Diamond mark
-  const cx = W / 2, dy = 110;
+  // Diamond
+  const cx = W / 2;
   ctx.save();
-  ctx.translate(cx, dy);
+  ctx.translate(cx, 108);
   ctx.rotate(Math.PI / 4);
   ctx.fillStyle = '#8B6000';
   ctx.fillRect(-10, -10, 20, 20);
   ctx.restore();
 
-  // Brand name
+  // Brand
   ctx.fillStyle = '#FFFDF8';
-  ctx.font = 'bold 52px serif';
+  ctx.font = 'bold 48px serif';
   ctx.textAlign = 'center';
-  ctx.letterSpacing = '8px';
-  ctx.fillText('SANAATAN', cx, 190);
+  ctx.fillText('SANAATAN', cx, 180);
 
-  // Divider line
+  // Divider top
   ctx.strokeStyle = '#8B6000';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(cx - 120, 210);
-  ctx.lineTo(cx + 120, 210);
+  ctx.moveTo(cx - 100, 200);
+  ctx.lineTo(cx + 100, 200);
   ctx.stroke();
 
-  // Answer text — clean plain text, wrap to fit
+  // ── Extract citation and clean answer text ──
+  // Look for patterns like "Bhagavad Gita, Chapter X, Verse Y" or "Katha Upanishad..."
+  const citationMatch = text.match(/((?:Bhagavad Gita|Katha Upanishad|Isha Upanishad|Mundaka Upanishad|Mandukya Upanishad|Chandogya Upanishad|Brihadaranyaka Upanishad)[^,\n]*,\s*Chapter\s*\d+[^,\n]*,\s*Verse\s*[\d\-]+)/i);
+  const citation = citationMatch ? citationMatch[1].trim() : '';
+
+  // Look for Sanskrit (Devanagari script)
+  const sanskritMatch = text.match(/[\u0900-\u097F][^\n]*/);
+  const sanskrit = sanskritMatch ? sanskritMatch[0].trim() : '';
+
+  // Clean answer — remove Sanskrit lines, citation lines, contemplation line, markdown
   const plain = text
     .replace(/\*\*(.*?)\*\*/g, '$1')
     .replace(/\*(.*?)\*/g, '$1')
     .replace(/^##+ .*/gm, '')
+    .replace(/💭.*$/m, '')
+    .replace(/The scriptures say:?/gi, '')
     .split('\n')
     .map(l => l.trim())
-    .filter(l => l.length > 0)
+    .filter(l => {
+      if (!l) return false;
+      if (/[\u0900-\u097F]/.test(l)) return false; // Sanskrit line
+      if (/Chapter\s*\d+/i.test(l)) return false; // Citation line
+      if (/Upanishad|Bhagavad Gita/i.test(l) && l.length < 60) return false;
+      return true;
+    })
     .join(' ');
 
-  // Take first ~300 chars for the card
-  const excerpt = plain.length > 320 ? plain.slice(0, 317) + '...' : plain;
+  // Take first ~280 chars as the insight
+  const excerpt = plain.length > 290 ? plain.slice(0, 287) + '...' : plain;
 
+  // ── Insight text (answer) — italic, cream ──
   ctx.fillStyle = '#DDD0B8';
-  ctx.font = '32px serif';
+  ctx.font = 'italic 31px serif';
   ctx.textAlign = 'center';
 
-  // Word wrap
   const words = excerpt.split(' ');
-  const maxWidth = W - 160;
-  const lineHeight = 52;
-  let line = '';
-  let y = 290;
-  const maxLines = 11;
-  let lineCount = 0;
+  const maxWidth = W - 180;
+  const lineH = 50;
+  let line = '', y = 270, lineCount = 0;
+  const maxLines = 10;
 
   for (let i = 0; i < words.length; i++) {
     const test = line + (line ? ' ' : '') + words[i];
     if (ctx.measureText(test).width > maxWidth && line) {
       ctx.fillText(line, cx, y);
       line = words[i];
-      y += lineHeight;
+      y += lineH;
       lineCount++;
       if (lineCount >= maxLines) {
-        // Add ellipsis on last line
         ctx.fillText(line + '...', cx, y);
         line = null;
         break;
@@ -587,21 +600,46 @@ function generateShareCard(text) {
       line = test;
     }
   }
-  if (line) ctx.fillText(line, cx, y);
+  if (line) { ctx.fillText(line, cx, y); y += lineH; }
 
-  // Bottom divider
+  // ── Mid divider ──
+  const divY = Math.max(y + 30, 780);
+  ctx.strokeStyle = '#3D2B00';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(cx - 60, divY);
+  ctx.lineTo(cx + 60, divY);
+  ctx.stroke();
+
+  // ── Sanskrit (if found) ──
+  if (sanskrit) {
+    ctx.fillStyle = '#DDD0B8';
+    ctx.font = '28px serif';
+    ctx.textAlign = 'center';
+    const shortSanskrit = sanskrit.length > 60 ? sanskrit.slice(0, 57) + '...' : sanskrit;
+    ctx.fillText(shortSanskrit, cx, divY + 48);
+  }
+
+  // ── Citation ──
+  if (citation) {
+    ctx.fillStyle = '#C49A20';
+    ctx.font = '24px serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(citation, cx, sanskrit ? divY + 86 : divY + 48);
+  }
+
+  // ── Bottom divider + URL ──
   ctx.strokeStyle = '#8B6000';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(cx - 120, H - 130);
-  ctx.lineTo(cx + 120, H - 130);
+  ctx.moveTo(cx - 100, H - 110);
+  ctx.lineTo(cx + 100, H - 110);
   ctx.stroke();
 
-  // URL
   ctx.fillStyle = '#8B6000';
-  ctx.font = '28px serif';
+  ctx.font = '26px serif';
   ctx.textAlign = 'center';
-  ctx.fillText('sanaatan.life', cx, H - 80);
+  ctx.fillText('sanaatan.life', cx, H - 70);
 
   // Download
   const link = document.createElement('a');
