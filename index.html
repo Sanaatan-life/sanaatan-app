@@ -58,7 +58,7 @@
     .msg.user .msg-label{text-align:right;color:var(--gold);}
     .msg-bubble{padding:14px 20px;border-radius:16px;font-size:16px;line-height:1.8;}
     .msg.user .msg-bubble{background:var(--user-bg);color:var(--user-text);border-top-right-radius:4px;font-family:'Playfair Display',serif;font-style:italic;}
-    .msg.assistant .msg-bubble{background:var(--warm-white);color:var(--ink-soft);border:1px solid var(--border);border-top-left-radius:4px;width:100%;}
+    .msg.assistant .msg-bubble{background:var(--warm-white);color:var(--ink-soft);border:1px solid var(--border);border-top-left-radius:4px;width:100%;position:relative;}
 
     /* TYPING */
     .typing{max-width:720px;width:100%;margin:0 auto;}
@@ -110,7 +110,8 @@
     @media(max-width:520px){header{padding:10px 16px;}#chatArea{padding:16px 12px;}footer{padding:10px 12px 16px;}}
 /* SHARE CARD BUTTON */
     /* SHARE BUTTON */
-    .share-btn{display:flex;align-items:center;gap:6px;align-self:flex-end;margin-top:10px;background:var(--gold);border:none;border-radius:20px;padding:7px 16px;font-size:12px;color:white;cursor:pointer;font-family:'Source Serif 4',serif;letter-spacing:0.04em;transition:background 0.2s;}
+    /* SHARE BUTTON */
+    .share-btn{position:absolute;top:10px;right:10px;background:var(--gold);border:none;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:13px;color:white;cursor:pointer;transition:background 0.2s;flex-shrink:0;}
     .share-btn:hover{background:var(--gold-mid);}
   </style>
 </head>
@@ -482,13 +483,14 @@ sb.auth.onAuthStateChange(async (event, session) => {
   d.appendChild(l);
   d.appendChild(b);
 
-  // Share button for assistant messages
+  // Share button — inside bubble, top-right corner
   if (role === 'assistant') {
     const shareBtn = document.createElement('button');
     shareBtn.className = 'share-btn';
-    shareBtn.innerHTML = '&#x2B06; Share';
+    shareBtn.title = 'Share this answer';
+    shareBtn.innerHTML = '&#x2B06;';
     shareBtn.onclick = () => generateShareCard(text);
-    d.appendChild(shareBtn);
+    b.appendChild(shareBtn);
   }
 
   chatArea.appendChild(d);
@@ -518,81 +520,100 @@ function generateShareCard(text) {
   // Border
   ctx.strokeStyle = '#8B6000';
   ctx.lineWidth = 3;
-  ctx.strokeRect(32, 32, W - 64, H - 64);
+  ctx.strokeRect(40, 40, W - 80, H - 80);
+
+  const cx = W / 2;
 
   // Diamond
-  const cx = W / 2;
   ctx.save();
-  ctx.translate(cx, 108);
+  ctx.translate(cx, 130);
   ctx.rotate(Math.PI / 4);
   ctx.fillStyle = '#8B6000';
-  ctx.fillRect(-10, -10, 20, 20);
+  ctx.fillRect(-12, -12, 24, 24);
   ctx.restore();
 
   // Brand
   ctx.fillStyle = '#FFFDF8';
-  ctx.font = 'bold 48px serif';
+  ctx.font = 'bold 52px serif';
   ctx.textAlign = 'center';
-  ctx.fillText('SANAATAN', cx, 180);
+  ctx.fillText('SANAATAN', cx, 210);
 
-  // Divider top
+  // Top divider
   ctx.strokeStyle = '#8B6000';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(cx - 100, 200);
-  ctx.lineTo(cx + 100, 200);
+  ctx.moveTo(cx - 110, 232);
+  ctx.lineTo(cx + 110, 232);
   ctx.stroke();
 
-  // ── Extract citation and clean answer text ──
-  // Look for patterns like "Bhagavad Gita, Chapter X, Verse Y" or "Katha Upanishad..."
+  // ── Extract citation and Sanskrit ──
   const citationMatch = text.match(/((?:Bhagavad Gita|Katha Upanishad|Isha Upanishad|Mundaka Upanishad|Mandukya Upanishad|Chandogya Upanishad|Brihadaranyaka Upanishad)[^,\n]*,\s*Chapter\s*\d+[^,\n]*,\s*Verse\s*[\d\-]+)/i);
   const citation = citationMatch ? citationMatch[1].trim() : '';
-
-  // Look for Sanskrit (Devanagari script)
   const sanskritMatch = text.match(/[\u0900-\u097F][^\n]*/);
   const sanskrit = sanskritMatch ? sanskritMatch[0].trim() : '';
 
-  // Clean answer — remove Sanskrit lines, citation lines, contemplation line, markdown
+  // ── Sanskrit — large, gold, centered ──
+  if (sanskrit) {
+    const short = sanskrit.length > 55 ? sanskrit.slice(0, 52) + '...' : sanskrit;
+    ctx.fillStyle = '#C49A20';
+    ctx.font = 'bold 52px serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(short, cx, 320);
+  }
+
+  // ── Mid divider ──
+  ctx.strokeStyle = '#3D2B00';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(cx - 60, 360);
+  ctx.lineTo(cx + 60, 360);
+  ctx.stroke();
+
+  // ── Clean answer — take FIRST complete sentence(s), max 2-3 lines ──
   const plain = text
     .replace(/\*\*(.*?)\*\*/g, '$1')
     .replace(/\*(.*?)\*/g, '$1')
     .replace(/^##+ .*/gm, '')
-    .replace(/💭.*$/m, '')
+    .replace(/💭.*$/ms, '')
     .replace(/The scriptures say:?/gi, '')
     .split('\n')
     .map(l => l.trim())
     .filter(l => {
       if (!l) return false;
-      if (/[\u0900-\u097F]/.test(l)) return false; // Sanskrit line
-      if (/Chapter\s*\d+/i.test(l)) return false; // Citation line
-      if (/Upanishad|Bhagavad Gita/i.test(l) && l.length < 60) return false;
+      if (/[\u0900-\u097F]/.test(l)) return false;
+      if (/Chapter\s*\d+/i.test(l)) return false;
+      if (/(Upanishad|Bhagavad Gita)/i.test(l) && l.length < 80) return false;
       return true;
     })
     .join(' ');
 
-  // Take first ~280 chars as the insight
-  const excerpt = plain.length > 290 ? plain.slice(0, 287) + '...' : plain;
+  // Take first 2 complete sentences
+  const sentenceMatch = plain.match(/^(.*?[.!?])\s+(.*?[.!?])/);
+  const insight = sentenceMatch
+    ? sentenceMatch[1] + ' ' + sentenceMatch[2]
+    : plain.slice(0, 160);
 
-  // ── Insight text (answer) — italic, cream ──
+  // ── Render insight — large italic, cream, max 3 lines ──
   ctx.fillStyle = '#DDD0B8';
-  ctx.font = 'italic 31px serif';
+  ctx.font = 'italic 42px serif';
   ctx.textAlign = 'center';
 
-  const words = excerpt.split(' ');
-  const maxWidth = W - 180;
-  const lineH = 50;
-  let line = '', y = 270, lineCount = 0;
-  const maxLines = 10;
+  const words = insight.split(' ');
+  const maxW = W - 200;
+  const lineH = 64;
+  let line = '', y = 460, lineCount = 0;
+  const maxLines = 3;
 
   for (let i = 0; i < words.length; i++) {
     const test = line + (line ? ' ' : '') + words[i];
-    if (ctx.measureText(test).width > maxWidth && line) {
+    if (ctx.measureText(test).width > maxW && line) {
       ctx.fillText(line, cx, y);
       line = words[i];
       y += lineH;
       lineCount++;
       if (lineCount >= maxLines) {
-        ctx.fillText(line + '...', cx, y);
+        // End cleanly — no ellipsis mid-word
+        ctx.fillText(line, cx, y);
         line = null;
         break;
       }
@@ -602,44 +623,26 @@ function generateShareCard(text) {
   }
   if (line) { ctx.fillText(line, cx, y); y += lineH; }
 
-  // ── Mid divider ──
-  const divY = Math.max(y + 30, 780);
-  ctx.strokeStyle = '#3D2B00';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(cx - 60, divY);
-  ctx.lineTo(cx + 60, divY);
-  ctx.stroke();
-
-  // ── Sanskrit (if found) ──
-  if (sanskrit) {
-    ctx.fillStyle = '#DDD0B8';
-    ctx.font = '28px serif';
-    ctx.textAlign = 'center';
-    const shortSanskrit = sanskrit.length > 60 ? sanskrit.slice(0, 57) + '...' : sanskrit;
-    ctx.fillText(shortSanskrit, cx, divY + 48);
-  }
-
   // ── Citation ──
   if (citation) {
-    ctx.fillStyle = '#C49A20';
-    ctx.font = '24px serif';
+    ctx.fillStyle = '#8B6000';
+    ctx.font = '30px serif';
     ctx.textAlign = 'center';
-    ctx.fillText(citation, cx, sanskrit ? divY + 86 : divY + 48);
+    ctx.fillText(citation, cx, y + 40);
   }
 
   // ── Bottom divider + URL ──
   ctx.strokeStyle = '#8B6000';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(cx - 100, H - 110);
-  ctx.lineTo(cx + 100, H - 110);
+  ctx.moveTo(cx - 110, H - 120);
+  ctx.lineTo(cx + 110, H - 120);
   ctx.stroke();
 
   ctx.fillStyle = '#8B6000';
-  ctx.font = '26px serif';
+  ctx.font = '28px serif';
   ctx.textAlign = 'center';
-  ctx.fillText('sanaatan.life', cx, H - 70);
+  ctx.fillText('sanaatan.life', cx, H - 75);
 
   // Download
   const link = document.createElement('a');
