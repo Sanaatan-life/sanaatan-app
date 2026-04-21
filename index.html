@@ -58,7 +58,7 @@
     .msg.user .msg-label{text-align:right;color:var(--gold);}
     .msg-bubble{padding:14px 20px;border-radius:16px;font-size:16px;line-height:1.8;}
     .msg.user .msg-bubble{background:var(--user-bg);color:var(--user-text);border-top-right-radius:4px;font-family:'Playfair Display',serif;font-style:italic;}
-    .msg.assistant .msg-bubble{background:var(--warm-white);color:var(--ink-soft);border:1px solid var(--border);border-top-left-radius:4px;width:100%;position:relative;}
+    .msg.assistant .msg-bubble{background:var(--warm-white);color:var(--ink-soft);border:1px solid var(--border);border-top-left-radius:4px;width:100%;position:relative;padding-top:42px;}
 
     /* TYPING */
     .typing{max-width:720px;width:100%;margin:0 auto;}
@@ -330,7 +330,8 @@ sb.auth.onAuthStateChange(async (event, session) => {
 
     function canAsk() {
       if (isUnlimited()) return true;
-      return questionsUsed < FREE_LIMIT; // FIX 2: non-users also get 3 questions
+      if (!currentUser) return questionsUsed < 1; // guests get 1 question only
+      return questionsUsed < FREE_LIMIT;
     }
 
     // ── AUTH MODAL ─────────────────────────────────────────────────────────────
@@ -552,19 +553,32 @@ function generateShareCard(text) {
 
   // ── Sanskrit — large, gold, centered ──
   if (sanskrit) {
-    const short = sanskrit.length > 55 ? sanskrit.slice(0, 52) + '...' : sanskrit;
     ctx.fillStyle = '#C49A20';
-    ctx.font = 'bold 52px serif';
+    ctx.font = 'bold 44px serif';
     ctx.textAlign = 'center';
-    ctx.fillText(short, cx, 320);
+    const sWords = sanskrit.split(' ');
+    const sMaxW = W - 160;
+    let sLine = '', sY = 300;
+    for (let i = 0; i < sWords.length; i++) {
+      const test = sLine + (sLine ? ' ' : '') + sWords[i];
+      if (ctx.measureText(test).width > sMaxW && sLine) {
+        ctx.fillText(sLine, cx, sY);
+        sLine = sWords[i];
+        sY += 58;
+      } else { sLine = test; }
+    }
+    if (sLine) { ctx.fillText(sLine, cx, sY); sY += 58; }
+    // Update divider Y based on actual Sanskrit height
+    window._sanskritEndY = sY;
   }
 
   // ── Mid divider ──
+  const midDivY = window._sanskritEndY ? window._sanskritEndY + 10 : 360;
   ctx.strokeStyle = '#3D2B00';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(cx - 60, 360);
-  ctx.lineTo(cx + 60, 360);
+  ctx.moveTo(cx - 60, midDivY);
+  ctx.lineTo(cx + 60, midDivY);
   ctx.stroke();
 
   // ── Clean answer — take FIRST complete sentence(s), max 2-3 lines ──
@@ -602,7 +616,7 @@ function generateShareCard(text) {
   const words = insight.split(' ');
   const maxW = W - 200;
   const lineH = 64;
-  let line = '', y = 460, lineCount = 0;
+  let line = '', y = (window._sanskritEndY ? window._sanskritEndY + 80 : 460), lineCount = 0;
   const maxLines = 3;
 
   for (let i = 0; i < words.length; i++) {
@@ -709,6 +723,14 @@ function generateShareCard(text) {
         } catch { answer = text; }
         addMessage('assistant', answer);
         await incrementCount();
+        // Force sign-in for guests after first question
+        if (!currentUser && questionsUsed >= 1) {
+          setTimeout(() => {
+            document.getElementById('modalTitle').textContent = 'Continue your journey';
+            document.getElementById('modalSubtext').textContent = 'Create a free account to ask more questions. You get 3 free questions every day — they reset at midnight.';
+            showAuthModal();
+          }, 1500);
+        }
       } catch (err) {
         removeTyping();
         addError('Something went wrong connecting to the scriptures. Please try again.');
