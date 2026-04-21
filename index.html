@@ -329,10 +329,9 @@ sb.auth.onAuthStateChange(async (event, session) => {
     }
 
     function canAsk() {
-      if (isUnlimited()) return true;
-      if (!currentUser) return questionsUsed < 1; // guests get 1 question only
-      return questionsUsed < FREE_LIMIT;
-    }
+  if (isUnlimited()) return true;
+  return questionsUsed < FREE_LIMIT;
+}
 
     // ── AUTH MODAL ─────────────────────────────────────────────────────────────
     function showAuthModal() {
@@ -687,56 +686,61 @@ function generateShareCard(text) {
       chatArea.scrollTop = chatArea.scrollHeight;
     }
 
-    async function sendQuestion() {
-      const question = input.value.trim();
-      if (!question || sendBtn.disabled) return;
+async function sendQuestion() {
+  const question = input.value.trim();
+  if (!question || sendBtn.disabled) return;
 
-      if (!canAsk()) {
-        if (!currentUser) {
-          document.getElementById('modalTitle').textContent = 'Sign in to continue';
-          document.getElementById('modalSubtext').textContent = 'You\'ve used your 3 free questions today. Sign in or create a free account — your 3 daily questions reset every day.';
-          showAuthModal();
-        } else {
-          showUpgradeBanner();
-        }
-        return;
-      }
+  // Block guest after 1 question
+  if (!currentUser && questionsUsed >= 1) {
+    document.getElementById('modalTitle').textContent = 'Continue your journey';
+    document.getElementById('modalSubtext').textContent = 'Create a free account to ask more questions. You get 3 free questions every day — they reset at midnight.';
+    showAuthModal();
+    return;
+  }
 
-      input.value = '';
-      input.style.height = 'auto';
-      sendBtn.disabled = true;
-      addMessage('user', question);
-      addTyping();
+  // Block logged-in user at tier limit
+  if (currentUser && !canAsk()) {
+    showUpgradeBanner();
+    return;
+  }
 
-      try {
-        const res = await fetch('/api/ask', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ question, top_k: 5, user_id: currentUser?.id || "" })
-        });
-        removeTyping();
-        const text = await res.text();
-        let answer;
-        try {
-          const data = JSON.parse(text);
-          answer = data.answer || data.error || text;
-        } catch { answer = text; }
-        addMessage('assistant', answer);
-        await incrementCount();
-        // Force sign-in for guests after first question
-        if (!currentUser && questionsUsed >= 1) {
-          setTimeout(() => {
-            document.getElementById('modalTitle').textContent = 'Continue your journey';
-            document.getElementById('modalSubtext').textContent = 'Create a free account to ask more questions. You get 3 free questions every day — they reset at midnight.';
-            showAuthModal();
-          }, 1500);
-        }
-      } catch (err) {
-        removeTyping();
-        addError('Something went wrong connecting to the scriptures. Please try again.');
-        console.error(err);
-      }
+  input.value = '';
+  input.style.height = 'auto';
+  sendBtn.disabled = true;
+  addMessage('user', question);
+  addTyping();
+
+  try {
+    const res = await fetch('/api/ask', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question, top_k: 5, user_id: currentUser?.id || "" })
+    });
+    removeTyping();
+    const text = await res.text();
+    let answer;
+    try {
+      const data = JSON.parse(text);
+      answer = data.answer || data.error || text;
+    } catch { answer = text; }
+    addMessage('assistant', answer);
+    await incrementCount();
+
+    // After answer delivered — show sign-in modal for guests
+    if (!currentUser) {
+      setTimeout(() => {
+        document.getElementById('modalTitle').textContent = 'Continue your journey';
+        document.getElementById('modalSubtext').textContent = 'Create a free account to ask more questions. You get 3 free questions every day — they reset at midnight.';
+        showAuthModal();
+      }, 1500);
     }
+
+  } catch (err) {
+    removeTyping();
+    addError('Something went wrong connecting to the scriptures. Please try again.');
+    console.error(err);
+  }
+}
   </script>
 </body>
 </html>
