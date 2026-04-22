@@ -111,6 +111,18 @@
 /* SHARE CARD BUTTON */
     .share-btn{position:absolute;top:10px;right:10px;background:var(--gold);border:none;border-radius:20px;padding:5px 12px;font-size:11px;color:white;cursor:pointer;font-family:'Source Serif 4',serif;letter-spacing:0.04em;display:flex;align-items:center;gap:4px;transition:background 0.2s;}
     .share-btn:hover{background:var(--gold-mid);}
+    /* INTENT MODAL */
+.intent-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:200;align-items:center;justify-content:center;}
+.intent-overlay.active{display:flex;}
+.intent-modal{background:var(--warm-white);border-radius:20px;padding:40px 36px;max-width:480px;width:92%;text-align:center;}
+.intent-modal h3{font-family:'Playfair Display',serif;font-size:26px;color:var(--ink);margin-bottom:10px;font-weight:700;}
+.intent-modal p{font-size:15px;color:var(--muted);margin-bottom:28px;line-height:1.6;}
+.intent-options{display:flex;flex-direction:column;gap:10px;margin-bottom:20px;}
+.intent-option{background:var(--cream);border:1.5px solid var(--border);border-radius:12px;padding:14px 20px;font-size:15px;color:var(--ink-soft);cursor:pointer;font-family:'Source Serif 4',serif;text-align:left;transition:all 0.2s;display:flex;align-items:center;gap:12px;}
+.intent-option:hover{border-color:var(--gold);color:var(--gold);background:var(--pale-gold);}
+.intent-option.selected{border-color:var(--gold);background:var(--pale-gold);color:var(--ink);}
+.intent-skip{font-size:13px;color:var(--muted);cursor:pointer;text-decoration:underline;background:none;border:none;font-family:'Source Serif 4',serif;}
+.intent-skip:hover{color:var(--gold);}
   </style>
 </head>
 <body>
@@ -218,6 +230,7 @@ sb.auth.onAuthStateChange(async (event, session) => {
     updateHeader();
     await ensureProfile();
     await loadQuestionCount();
+    await showIntentModal();
   } else {
     currentUser = null;
     cachedTier = 'free';
@@ -273,7 +286,7 @@ sb.auth.onAuthStateChange(async (event, session) => {
   counter.textContent = 'Loading...';
   counter.style.color = 'var(--muted)';
   const { data, error } = await sb.from('user_profiles')
-    .select('questions_today, last_question_date, tier')
+    .select('questions_today, last_question_date, tier, intent')
     .eq('id', currentUser.id).single();
   if (error || !data) {
     cachedTier = 'free';
@@ -282,6 +295,7 @@ sb.auth.onAuthStateChange(async (event, session) => {
     return;
   }
   cachedTier = data.tier || 'free';
+  if (data.intent && data.intent !== 'exploring') updateWelcomeSuggestions(data.intent);
   if (data.last_question_date !== today()) {
     questionsUsed = 0;
     await sb.from('user_profiles').update({ 
@@ -392,7 +406,80 @@ sb.auth.onAuthStateChange(async (event, session) => {
       });
       if (error) console.error('Google sign in error:', error);
     }
+  // ── INTENT ONBOARDING ─────────────────────────────────────────
+const intentSuggestions = {
+  difficult: [
+    "How does the Gita say to carry grief without being consumed by it?",
+    "What does Krishna teach about fear and anxiety?",
+    "How do I find peace when everything feels uncertain?",
+    "What does the Gita say about losing someone you love?"
+  ],
+  daily: [
+    "Give me one teaching from the Gita to start my day",
+    "What is the Gita's teaching on building a daily practice?",
+    "How should I begin each morning according to the scriptures?",
+    "What does Krishna say about discipline and consistency?"
+  ],
+  study: [
+    "What are the main teachings of the Bhagavad Gita?",
+    "What is the difference between the Gita and the Upanishads?",
+    "Explain the concept of dharma in depth",
+    "What is the Gita's teaching on the three gunas?"
+  ],
+  curious: [
+    "What is the Bhagavad Gita about?",
+    "What is the nature of the eternal soul according to the Upanishads?",
+    "What is moksha and how does one attain it?",
+    "How does Advaita Vedanta explain consciousness?"
+  ],
+  exploring: [
+    "What is the Bhagavad Gita about?",
+    "Give me one teaching from the Gita to start my day",
+    "What does Krishna say about performing duty without attachment?",
+    "What is the nature of the eternal soul?"
+  ]
+};
 
+async function showIntentModal() {
+  // Only show once — check if already set
+  if (currentUser) {
+    const { data } = await sb.from('user_profiles')
+      .select('intent')
+      .eq('id', currentUser.id)
+      .single();
+    if (data?.intent && data.intent !== 'exploring') return; // already set
+  }
+  document.getElementById('intentModal').classList.add('active');
+}
+
+async function selectIntent(intent) {
+  document.getElementById('intentModal').classList.remove('active');
+  updateWelcomeSuggestions(intent);
+  if (currentUser) {
+    await sb.from('user_profiles')
+      .update({ intent: intent })
+      .eq('id', currentUser.id);
+  }
+}
+
+function skipIntent() {
+  document.getElementById('intentModal').classList.remove('active');
+  // Tag as exploring — default already set in Supabase
+}
+
+function updateWelcomeSuggestions(intent) {
+  const suggestions = intentSuggestions[intent] || intentSuggestions.exploring;
+  const container = document.querySelector('.suggestions');
+  if (!container) return;
+  container.innerHTML = '';
+  suggestions.forEach(q => {
+    const btn = document.createElement('button');
+    btn.className = 'chip';
+    btn.textContent = q;
+    btn.onclick = () => ask(q);
+    container.appendChild(btn);
+  });
+}  
     // ── CHAT ───────────────────────────────────────────────────────────────────
     input.addEventListener('input', () => {
       sendBtn.disabled = input.value.trim().length === 0;
@@ -731,5 +818,20 @@ async function sendQuestion() {
   }
 }
   </script>
+<!-- INTENT MODAL -->
+<div class="intent-overlay" id="intentModal">
+  <div class="intent-modal">
+    <h3>What brings you here?</h3>
+    <p>Help us show you the most relevant wisdom. You can always ask anything.</p>
+    <div class="intent-options">
+      <button class="intent-option" onclick="selectIntent('difficult')">🌊 &nbsp;I'm going through something difficult</button>
+      <button class="intent-option" onclick="selectIntent('daily')">🌅 &nbsp;I want a daily spiritual practice</button>
+      <button class="intent-option" onclick="selectIntent('study')">📖 &nbsp;I want to study the scriptures deeply</button>
+      <button class="intent-option" onclick="selectIntent('curious')">🤔 &nbsp;I'm curious about Hindu philosophy</button>
+      <button class="intent-option" onclick="selectIntent('exploring')">✨ &nbsp;Just exploring</button>
+    </div>
+    <button class="intent-skip" onclick="skipIntent()">Skip for now</button>
+  </div>
+</div>
 </body>
 </html>
