@@ -447,10 +447,9 @@ sb.auth.onAuthStateChange(async (event, session) => {
       d.className = 'upgrade-banner';
       d.id = 'upgrade-banner';
       d.innerHTML = `
-        <p>You've used all 3 free questions for today. Come back tomorrow, or upgrade for more.</p>
-        <a href="https://rzp.io/rzp/2NowaMx" target="_blank">Daily ₹299 →</a>
-        <a href="https://rzp.io/rzp/apoetBwM" target="_blank">Unlimited ₹499 →</a>
-        <a href="https://rzp.io/rzp/hlZLeN68" target="_blank">Annual ₹2,999 →</a>`;
+       d.innerHTML = `
+  <p>You've used all your questions for today. Upgrade to ask more.</p>
+  <a href="https://sanaatan.life/pricing" target="_blank" style="background:var(--gold);color:white;border-radius:8px;padding:10px 24px;font-size:15px;text-decoration:none;display:inline-block;margin-top:4px;">See all plans →</a>`;
       chatArea.appendChild(d);
       chatArea.scrollTop = chatArea.scrollHeight;
     }
