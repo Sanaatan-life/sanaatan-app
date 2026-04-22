@@ -743,11 +743,33 @@ function generateShareCard(text) {
   ctx.textAlign = 'center';
   ctx.fillText('sanaatan.life', cx, H - 75);
 
-  // Download
-  const link = document.createElement('a');
-  link.download = 'sanaatan-wisdom.png';
-  link.href = canvas.toDataURL('image/png');
-  link.click();
+  // Share or download
+  canvas.toBlob(async (blob) => {
+    const file = new File([blob], 'sanaatan-wisdom.png', { type: 'image/png' });
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          title: 'Sanaatan Wisdom',
+          text: 'Ask your questions at sanaatan.life'
+        });
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          // User cancelled — fall back to download
+          const link = document.createElement('a');
+          link.download = 'sanaatan-wisdom.png';
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+        }
+      }
+    } else {
+      // Desktop or unsupported browser — download
+      const link = document.createElement('a');
+      link.download = 'sanaatan-wisdom.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+  }, 'image/png');
 }
 
     function addTyping() {
