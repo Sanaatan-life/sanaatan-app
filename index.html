@@ -136,6 +136,7 @@
 .lang-btn{background:transparent;border:none;padding:4px 10px;font-size:11px;color:var(--muted);cursor:pointer;font-family:'Source Serif 4',serif;font-weight:600;letter-spacing:0.05em;transition:all 0.2s;}
 .lang-btn.active{background:var(--gold);color:white;}
 @media(max-width:520px){.lang-toggle{margin-left:4px;}.lang-btn{padding:3px 8px;font-size:10px;}}
+.msg-bubble [devanagari]{font-family:'Tiro Devanagari Hindi','Noto Serif Devanagari',serif;display:block;margin:8px 0;font-size:18px;line-height:1.9;}
   </style>
 </head>
 <body>
@@ -237,6 +238,47 @@ function updateLanguageUI() {
   if (welcomeH2) welcomeH2.textContent = isHi ? 'आपका हृदय क्या जानना चाहता है?' : 'What does your heart seek to understand?';
   const welcomeP = document.querySelector('.welcome p');
   if (welcomeP) welcomeP.textContent = isHi ? 'नए हैं? नीचे से एक प्रश्न चुनें या अपना स्वयं का टाइप करें।' : 'New here? Start with one of these. Or type your own question below.';
+
+  // Update suggestion chips
+  const chips = document.querySelectorAll('.suggestions .chip');
+  const chipsHi = [
+    'भगवद गीता किस बारे में है?',
+    'आज के लिए एक शिक्षा',
+    'अनासक्त कर्म पर',
+    'दुख और मृत्यु पर',
+    'अमर आत्मा पर',
+    'मोक्ष पर'
+  ];
+  const chipsEn = [
+    'What is the Gita about?',
+    'A teaching for today',
+    'On duty without attachment',
+    'On grief and death',
+    'On the eternal soul',
+    'On moksha'
+  ];
+  const chipQuestionsHi = [
+    'भगवद गीता किस बारे में है?',
+    'मेरे दिन की शुरुआत के लिए गीता से एक शिक्षा दीजिए',
+    'कृष्ण अनासक्त कर्तव्य पालन के बारे में क्या कहते हैं?',
+    'दुख और मृत्यु के भय से कैसे निपटें?',
+    'अमर आत्मा का स्वरूप क्या है?',
+    'मोक्ष क्या है और इसे कैसे प्राप्त किया जाता है?'
+  ];
+  const chipQuestionsEn = [
+    'What is the Bhagavad Gita about?',
+    'Give me one teaching from the Gita to start my day',
+    'What does Krishna say about performing duty without attachment?',
+    'How should one deal with grief and fear of death?',
+    'What is the nature of the eternal soul?',
+    'What is moksha and how does one attain it?'
+  ];
+  chips.forEach((chip, i) => {
+    if (i < chipsHi.length) {
+      chip.textContent = isHi ? chipsHi[i] : chipsEn[i];
+      chip.onclick = () => ask(isHi ? chipQuestionsHi[i] : chipQuestionsEn[i]);
+    }
+  });
 }
 
 window.addEventListener('load', () => {
@@ -554,14 +596,22 @@ function updateWelcomeSuggestions(intent) {
       sendQuestion();
     }
 
-    const followupSuggestions = [
-      "Can you explain this teaching in simpler terms?",
-      "How can I apply this wisdom in daily life?",
-      "What do other scriptures say about this?",
-      "How did Krishna explain this to Arjuna?",
-      "What is the deeper meaning of this verse?",
-      "Tell me more about this spiritual teaching"
-    ];
+    const followupSuggestionsEn = [
+  "Can you explain this teaching in simpler terms?",
+  "How can I apply this wisdom in daily life?",
+  "What do other scriptures say about this?",
+  "How did Krishna explain this to Arjuna?",
+  "What is the deeper meaning of this verse?",
+  "Tell me more about this spiritual teaching"
+];
+const followupSuggestionsHi = [
+  "क्या आप इस शिक्षा को सरल शब्दों में समझा सकते हैं?",
+  "इस ज्ञान को दैनिक जीवन में कैसे लागू करूं?",
+  "अन्य शास्त्र इस बारे में क्या कहते हैं?",
+  "कृष्ण ने अर्जुन को यह कैसे समझाया?",
+  "इस श्लोक का गहरा अर्थ क्या है?",
+  "इस आध्यात्मिक शिक्षा के बारे में और बताइए"
+];
 
     function addFollowupChips() {
       const existing = document.getElementById('followup-chips');
@@ -569,7 +619,8 @@ function updateWelcomeSuggestions(intent) {
       const container = document.createElement('div');
       container.className = 'followup-chips';
       container.id = 'followup-chips';
-      const shuffled = followupSuggestions.sort(() => 0.5 - Math.random()).slice(0, 3);
+      const suggestions = currentLanguage === 'hi' ? followupSuggestionsHi : followupSuggestionsEn;
+      const shuffled = suggestions.sort(() => 0.5 - Math.random()).slice(0, 3);
       shuffled.forEach(q => {
         const btn = document.createElement('button');
         btn.className = 'followup-chip';
@@ -608,12 +659,13 @@ function updateWelcomeSuggestions(intent) {
   b.className = 'msg-bubble';
   if (role === 'assistant') {
     b.innerHTML = text
-      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-      .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g,'<em>$1</em>')
-      .replace(/^## (.*?)$/gm,'<h3 style="font-family:\'Playfair Display\',serif;font-size:18px;color:#1C1208;margin:12px 0 6px;">$1</h3>')
-      .replace(/^### (.*?)$/gm,'<h4 style="font-size:16px;color:#3D2B00;margin:10px 0 4px;">$1</h4>')
-      .replace(/\n/g,'<br>');
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+  .replace(/\*(.*?)\*/g,'<em>$1</em>')
+  .replace(/^## (.*?)$/gm,'<h3 style="font-family:\'Playfair Display\',serif;font-size:18px;color:#1C1208;margin:12px 0 6px;">$1</h3>')
+  .replace(/^### (.*?)$/gm,'<h4 style="font-size:16px;color:#3D2B00;margin:10px 0 4px;">$1</h4>')
+  .replace(/([\u0900-\u097F][^\n<]*)/g,'<span devanagari>$1</span>')
+  .replace(/\n/g,'<br>');
   } else {
     b.textContent = text;
   }
@@ -737,18 +789,19 @@ function generateShareCard(text) {
     })
     .join(' ');
 
-  // Take first complete sentence only — never cut mid-sentence
-  const sentenceMatch = plain.match(/^(.*?[.!?])/);
+  // Hindi sentences end with । (danda) — handle both English and Hindi punctuation
+  const sentenceMatch = plain.match(/^(.*?[.!?।])/);
   const firstSentence = sentenceMatch ? sentenceMatch[1] : plain.slice(0, 160);
-  // If first sentence is short, try to add a second complete one
-  const twoSentences = plain.match(/^(.*?[.!?])\s+(.*?[.!?])/);
+  const twoSentences = plain.match(/^(.*?[.!?।])\s+(.*?[.!?।])/);
   const insight = (twoSentences && twoSentences[0].length < 220)
     ? twoSentences[0]
     : firstSentence;
 
   // ── Render insight — large italic, cream, max 3 lines ──
+  // Detect if insight is Devanagari
+  const isHindi = /[\u0900-\u097F]/.test(insight);
   ctx.fillStyle = '#DDD0B8';
-  ctx.font = 'italic 42px serif';
+  ctx.font = isHindi ? '38px "Tiro Devanagari Hindi", serif' : 'italic 42px serif';
   ctx.textAlign = 'center';
 
   const words = insight.split(' ');
