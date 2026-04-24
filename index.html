@@ -735,16 +735,58 @@ function generateShareCard(text) {
   ctx.lineTo(cx + 110, 232);
   ctx.stroke();
 
-  // ── Extract citation and Sanskrit ──
+  // ── Extract citation (works in both English and Hindi responses) ──
   const citationMatch = text.match(/((?:Bhagavad Gita|Katha Upanishad|Isha Upanishad|Mundaka Upanishad|Mandukya Upanishad|Chandogya Upanishad|Brihadaranyaka Upanishad)[^,\n]*,\s*Chapter\s*\d+[^,\n]*,\s*Verse\s*[\d\-]+)/i);
   const citation = citationMatch ? citationMatch[1].trim() : '';
-  const sanskritMatch = text.match(/[\u0900-\u097F][^\n]*/);
-  const sanskrit = sanskritMatch ? sanskritMatch[0].trim() : '';
 
-  // ── Sanskrit — large, gold, centered ──
+  // Extract Sanskrit (Devanagari line, but only pure Sanskrit — not Hindi prose)
+  // Sanskrit lines typically short, standalone, no Hindi vocabulary markers
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  let sanskrit = '';
+  for (const line of lines) {
+    const devanagariOnly = /^[\u0900-\u097F\s।॥॥ॐ\d.,"'\-]+$/.test(line);
+    const isShort = line.length > 10 && line.length < 120;
+    if (devanagariOnly && isShort) {
+      sanskrit = line;
+      break;
+    }
+  }
+
+  // ── Clean answer — remove Sanskrit lines, citation lines, contemplation ──
+  const plain = text
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/\*(.*?)\*/g, '$1')
+    .replace(/^##+ .*/gm, '')
+    .replace(/💭.*$/ms, '')
+    .replace(/The scriptures say:?/gi, '')
+    .replace(/शास्त्र कहते हैं:?/g, '')
+    .split('\n')
+    .map(l => l.trim())
+    .filter(l => {
+      if (!l) return false;
+      // Skip pure Sanskrit lines (short, only Devanagari punctuation)
+      if (/^[\u0900-\u097F\s।॥ॐ\d.,"'\-]+$/.test(l) && l.length < 120) return false;
+      if (/Chapter\s*\d+/i.test(l)) return false;
+      if (/(Upanishad|Bhagavad Gita)/i.test(l) && l.length < 80) return false;
+      return true;
+    })
+    .join(' ');
+
+  const isHindi = /[\u0900-\u097F]/.test(plain);
+
+  // Take first complete sentence — handle both English and Hindi punctuation
+  const sentenceMatch = plain.match(/^(.*?[.!?।])/);
+  const firstSentence = sentenceMatch ? sentenceMatch[1] : plain.slice(0, 180);
+  const twoSentences = plain.match(/^(.*?[.!?।])\s+(.*?[.!?।])/);
+  const insight = (twoSentences && twoSentences[0].length < 240)
+    ? twoSentences[0]
+    : firstSentence;
+
+  // ── Sanskrit rendering (only if found) ──
+  let insightStartY = 300;
   if (sanskrit) {
     ctx.fillStyle = '#C49A20';
-    ctx.font = 'bold 44px serif';
+    ctx.font = 'bold 44px "Tiro Devanagari Hindi", serif';
     ctx.textAlign = 'center';
     const sWords = sanskrit.split(' ');
     const sMaxW = W - 160;
@@ -758,57 +800,28 @@ function generateShareCard(text) {
       } else { sLine = test; }
     }
     if (sLine) { ctx.fillText(sLine, cx, sY); sY += 58; }
-    // Update divider Y based on actual Sanskrit height
-    window._sanskritEndY = sY;
+
+    // Mid divider after Sanskrit
+    ctx.strokeStyle = '#3D2B00';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx - 60, sY + 10);
+    ctx.lineTo(cx + 60, sY + 10);
+    ctx.stroke();
+
+    insightStartY = sY + 80;
   }
 
-  // ── Mid divider ──
-  const midDivY = window._sanskritEndY ? window._sanskritEndY + 10 : 360;
-  ctx.strokeStyle = '#3D2B00';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(cx - 60, midDivY);
-  ctx.lineTo(cx + 60, midDivY);
-  ctx.stroke();
-
-  // ── Clean answer — take FIRST complete sentence(s), max 2-3 lines ──
-  const plain = text
-    .replace(/\*\*(.*?)\*\*/g, '$1')
-    .replace(/\*(.*?)\*/g, '$1')
-    .replace(/^##+ .*/gm, '')
-    .replace(/💭.*$/ms, '')
-    .replace(/The scriptures say:?/gi, '')
-    .split('\n')
-    .map(l => l.trim())
-    .filter(l => {
-      if (!l) return false;
-      if (/[\u0900-\u097F]/.test(l)) return false;
-      if (/Chapter\s*\d+/i.test(l)) return false;
-      if (/(Upanishad|Bhagavad Gita)/i.test(l) && l.length < 80) return false;
-      return true;
-    })
-    .join(' ');
-
-  // Hindi sentences end with । (danda) — handle both English and Hindi punctuation
-  const sentenceMatch = plain.match(/^(.*?[.!?।])/);
-  const firstSentence = sentenceMatch ? sentenceMatch[1] : plain.slice(0, 160);
-  const twoSentences = plain.match(/^(.*?[.!?।])\s+(.*?[.!?।])/);
-  const insight = (twoSentences && twoSentences[0].length < 220)
-    ? twoSentences[0]
-    : firstSentence;
-
-  // ── Render insight — large italic, cream, max 3 lines ──
-  // Detect if insight is Devanagari
-  const isHindi = /[\u0900-\u097F]/.test(insight);
+  // ── Insight rendering ──
   ctx.fillStyle = '#DDD0B8';
-  ctx.font = isHindi ? '38px "Tiro Devanagari Hindi", serif' : 'italic 42px serif';
+  ctx.font = isHindi ? '36px "Tiro Devanagari Hindi", serif' : 'italic 42px serif';
   ctx.textAlign = 'center';
 
   const words = insight.split(' ');
   const maxW = W - 200;
-  const lineH = 64;
-  let line = '', y = (window._sanskritEndY ? window._sanskritEndY + 80 : 460), lineCount = 0;
-  const maxLines = 3;
+  const lineH = isHindi ? 56 : 64;
+  let line = '', y = insightStartY, lineCount = 0;
+  const maxLines = sanskrit ? 5 : 8;
 
   for (let i = 0; i < words.length; i++) {
     const test = line + (line ? ' ' : '') + words[i];
@@ -818,7 +831,6 @@ function generateShareCard(text) {
       y += lineH;
       lineCount++;
       if (lineCount >= maxLines) {
-        // End cleanly — no ellipsis mid-word
         ctx.fillText(line, cx, y);
         line = null;
         break;
@@ -829,7 +841,7 @@ function generateShareCard(text) {
   }
   if (line) { ctx.fillText(line, cx, y); y += lineH; }
 
-  // ── Citation ──
+  // Citation
   if (citation) {
     ctx.fillStyle = '#8B6000';
     ctx.font = '30px serif';
@@ -837,7 +849,7 @@ function generateShareCard(text) {
     ctx.fillText(citation, cx, y + 40);
   }
 
-  // ── Bottom divider + URL ──
+  // Bottom divider + URL
   ctx.strokeStyle = '#8B6000';
   ctx.lineWidth = 1;
   ctx.beginPath();
@@ -850,33 +862,38 @@ function generateShareCard(text) {
   ctx.textAlign = 'center';
   ctx.fillText('sanaatan.life', cx, H - 75);
 
-  // Share or download
-  canvas.toBlob(async (blob) => {
-    const file = new File([blob], 'sanaatan-wisdom.png', { type: 'image/png' });
-    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+  // ── Device-aware save/share ──
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+  if (isMobile && navigator.share) {
+    canvas.toBlob(async (blob) => {
+      const file = new File([blob], 'sanaatan-wisdom.png', { type: 'image/png' });
       try {
-        await navigator.share({
-          files: [file],
-          title: 'Sanaatan Wisdom',
-          text: 'Ask your questions at sanaatan.life'
-        });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: 'Sanaatan Wisdom',
+            text: 'Ask your questions at sanaatan.life'
+          });
+        } else {
+          throw new Error('canShare false');
+        }
       } catch (err) {
         if (err.name !== 'AbortError') {
-          // User cancelled — fall back to download
           const link = document.createElement('a');
           link.download = 'sanaatan-wisdom.png';
           link.href = canvas.toDataURL('image/png');
           link.click();
         }
       }
-    } else {
-      // Desktop or unsupported browser — download
-      const link = document.createElement('a');
-      link.download = 'sanaatan-wisdom.png';
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-    }
-  }, 'image/png');
+    }, 'image/png');
+  } else {
+    // Desktop — auto-download
+    const link = document.createElement('a');
+    link.download = 'sanaatan-wisdom.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  }
 }
 
     function addTyping() {
