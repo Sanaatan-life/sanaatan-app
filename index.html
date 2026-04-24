@@ -131,6 +131,11 @@
 .intent-option.selected{border-color:var(--gold);background:var(--pale-gold);color:var(--ink);}
 .intent-skip{font-size:13px;color:var(--muted);cursor:pointer;text-decoration:underline;background:none;border:none;font-family:'Source Serif 4',serif;}
 .intent-skip:hover{color:var(--gold);}
+/* LANGUAGE TOGGLE */
+.lang-toggle{display:flex;align-items:center;background:var(--warm-white);border:1px solid var(--border);border-radius:20px;overflow:hidden;margin-left:8px;}
+.lang-btn{background:transparent;border:none;padding:4px 10px;font-size:11px;color:var(--muted);cursor:pointer;font-family:'Source Serif 4',serif;font-weight:600;letter-spacing:0.05em;transition:all 0.2s;}
+.lang-btn.active{background:var(--gold);color:white;}
+@media(max-width:520px){.lang-toggle{margin-left:4px;}.lang-btn{padding:3px 8px;font-size:10px;}}
   </style>
 </head>
 <body>
@@ -138,6 +143,10 @@
     <div><div class="diamond-mark"></div></div>
     <div class="brand-text"><h1>SANAATAN</h1><p>सनातन · The Eternal Way</p></div>
     <a href="https://sanaatan.life" class="home-btn" title="Home">🏠</a>
+    <div class="lang-toggle">
+  <button class="lang-btn active" id="langEn" onclick="setLanguage('en')">EN</button>
+  <button class="lang-btn" id="langHi" onclick="setLanguage('hi')">हिं</button>
+</div>
     <span id="userEmail" class="user-email"></span>
     <button id="authBtnHeader" class="auth-btn" onclick="handleAuthBtn()">Sign in</button>
     <span class="beta-badge">Beta</span>
@@ -205,6 +214,36 @@
 });
 
     const FREE_LIMIT  = 3;
+    let currentLanguage = localStorage.getItem('sanaatan_lang') || 'en';
+
+async function setLanguage(lang) {
+  currentLanguage = lang;
+  localStorage.setItem('sanaatan_lang', lang);
+  document.getElementById('langEn').classList.toggle('active', lang === 'en');
+  document.getElementById('langHi').classList.toggle('active', lang === 'hi');
+  updateLanguageUI();
+  if (currentUser) {
+    await sb.from('user_profiles')
+      .update({ language: lang })
+      .eq('id', currentUser.id);
+  }
+}
+
+function updateLanguageUI() {
+  const isHi = currentLanguage === 'hi';
+  const input = document.getElementById('questionInput');
+  if (input) input.placeholder = isHi ? 'अपना प्रश्न यहाँ पूछें…' : 'Ask your question here…';
+  const welcomeH2 = document.querySelector('.welcome h2');
+  if (welcomeH2) welcomeH2.textContent = isHi ? 'आपका हृदय क्या जानना चाहता है?' : 'What does your heart seek to understand?';
+  const welcomeP = document.querySelector('.welcome p');
+  if (welcomeP) welcomeP.textContent = isHi ? 'नए हैं? नीचे से एक प्रश्न चुनें या अपना स्वयं का टाइप करें।' : 'New here? Start with one of these. Or type your own question below.';
+}
+
+window.addEventListener('load', () => {
+  document.getElementById('langEn').classList.toggle('active', currentLanguage === 'en');
+  document.getElementById('langHi').classList.toggle('active', currentLanguage === 'hi');
+  updateLanguageUI();
+});
     let currentUser   = null;
     let authMode      = 'signin';
     let questionsUsed = 0;
@@ -294,7 +333,7 @@ sb.auth.onAuthStateChange(async (event, session) => {
   counter.textContent = 'Loading...';
   counter.style.color = 'var(--muted)';
   const { data, error } = await sb.from('user_profiles')
-    .select('questions_today, last_question_date, tier, intent')
+    .select('questions_today, last_question_date, tier, intent, language')
     .eq('id', currentUser.id).single();
   if (error || !data) {
     cachedTier = 'free';
@@ -303,6 +342,13 @@ sb.auth.onAuthStateChange(async (event, session) => {
     return;
   }
   cachedTier = data.tier || 'free';
+  if (data.language && data.language !== currentLanguage) {
+    currentLanguage = data.language;
+    localStorage.setItem('sanaatan_lang', currentLanguage);
+    document.getElementById('langEn').classList.toggle('active', currentLanguage === 'en');
+    document.getElementById('langHi').classList.toggle('active', currentLanguage === 'hi');
+    updateLanguageUI();
+  }
   if (data.intent && data.intent !== 'exploring') updateWelcomeSuggestions(data.intent);
   if (data.last_question_date !== today()) {
     questionsUsed = 0;
@@ -829,7 +875,7 @@ async function sendQuestion() {
     const res = await fetch('/api/ask', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question, top_k: 5, user_id: currentUser?.id || "" })
+      body: JSON.stringify({ question, top_k: 5, user_id: currentUser?.id || "", language: currentLanguage })
     });
     removeTyping();
     const text = await res.text();
