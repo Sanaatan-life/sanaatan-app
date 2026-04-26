@@ -745,20 +745,16 @@ function generateShareCard(text) {
     if (hindiCite) citation = hindiCite[1].trim();
   }
 
-  // ── Extract Sanskrit verse — must contain ।  or ॥ (verse markers) ──
-  // This is the key — Sanskrit verses end in दण्ड (।) not Hindi sentences
+  // ── Extract Sanskrit — find any Devanagari line that's NOT Hindi prose ──
   let sanskrit = '';
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
   for (const line of lines) {
-    // Sanskrit verse criteria: contains Devanagari, contains ।, length 20-200, NOT a citation
-    const hasDev = /[\u0900-\u097F]/.test(line);
-    const hasDanda = /।/.test(line);
-    const isVerseLength = line.length > 20 && line.length < 200;
-    const isNotCitation = !/(अध्याय|श्लोक|Chapter|Verse)/.test(line);
-    // Sanskrit-only check: should have minimal Hindi grammar markers
-    const hindiMarkers = (line.match(/(है।|हैं।|था।|थे।| की | के | का | और | में | से | को )/g) || []).length;
-    const isSanskrit = hindiMarkers <= 1; // pure Sanskrit has none, allow 1 for edge cases
-    if (hasDev && hasDanda && isVerseLength && isNotCitation && isSanskrit) {
+    if (!/[\u0900-\u097F]/.test(line)) continue;       // must have Devanagari
+    if (line.length < 15 || line.length > 250) continue; // reasonable verse length
+    if (/(अध्याय|श्लोक|Chapter|Verse)/.test(line)) continue; // skip citation lines
+    // Hindi prose has many of these. Sanskrit has 0-2 max.
+    const hindiMarkers = (line.match(/(है|हैं|था|थे|की |के |का |और |में |से |को |पर |यह |वह |कि |जो |हम |आप |मैं )/g) || []).length;
+    if (hindiMarkers <= 2) {
       sanskrit = line;
       break;
     }
