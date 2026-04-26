@@ -136,7 +136,9 @@
 .lang-btn{background:transparent;border:none;padding:4px 10px;font-size:11px;color:var(--muted);cursor:pointer;font-family:'Source Serif 4',serif;font-weight:600;letter-spacing:0.05em;transition:all 0.2s;}
 .lang-btn.active{background:var(--gold);color:white;}
 @media(max-width:520px){.lang-toggle{margin-left:4px;}.lang-btn{padding:3px 8px;font-size:10px;}}
-.msg-bubble [devanagari]{font-family:'Tiro Devanagari Hindi','Noto Serif Devanagari',serif;display:block;margin:8px 0;font-size:18px;line-height:1.9;}
+.msg-bubble [devanagari]{font-family:'Tiro Devanagari Hindi','Noto Serif Devanagari',serif;display:block;margin:4px 0;font-size:18px;line-height:1.6;}
+.msg-bubble [devanagari] + br{display:none;}
+.msg-bubble [devanagari] + [devanagari]{margin-top:0;}
   </style>
 </head>
 <body>
@@ -740,21 +742,25 @@ function generateShareCard(text) {
   const englishCite = text.match(/((?:Bhagavad Gita|Katha Upanishad|Isha Upanishad|Mundaka Upanishad|Mandukya Upanishad|Chandogya Upanishad|Brihadaranyaka Upanishad)[^,\n]*,\s*Chapter\s*\d+[^,\n]*,\s*Verse\s*[\d\-]+)/i);
   if (englishCite) citation = englishCite[1].trim();
   if (!citation) {
-    // Hindi: कठोपनिषद्, प्रथम अध्याय, श्लोक २६ OR भगवद गीता, अध्याय 2, श्लोक 47
-    const hindiCite = text.match(/((?:भगवद\s*गीता|कठोपनिषद|ईशोपनिषद|मुण्डकोपनिषद|माण्डूक्योपनिषद|छान्दोग्य|बृहदारण्यक)[^,\n]{0,20},\s*[^,\n]{0,30}अध्याय[^,\n]{0,30},\s*[^,\n]{0,15}श्लोक[^,\n]{0,15})/);
+    // Hindi format: भगवद् गीता, अध्याय 3, श्लोक 1 (note the दण्ड after भगवद्)
+    const hindiCite = text.match(/((?:भगवद्?\s*गीता|कठ\s*उपनिषद|कठोपनिषद्?|ईश\s*उपनिषद|ईशोपनिषद्?|मुण्डक\s*उपनिषद|मुण्डकोपनिषद्?|माण्डूक्य\s*उपनिषद|माण्डूक्योपनिषद्?|छान्दोग्य\s*उपनिषद|छान्दोग्योपनिषद्?|बृहदारण्यक\s*उपनिषद|बृहदारण्यकोपनिषद्?)[^,\n]*,\s*[^,\n]*अध्याय[^,\n]*,\s*[^,\n]*श्लोक[^\n]*?\d+)/);
     if (hindiCite) citation = hindiCite[1].trim();
   }
 
-  // ── Extract Sanskrit — find any Devanagari line that's NOT Hindi prose ──
+  // ── Extract Sanskrit ──
   let sanskrit = '';
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
   for (const line of lines) {
-    if (!/[\u0900-\u097F]/.test(line)) continue;       // must have Devanagari
-    if (line.length < 15 || line.length > 250) continue; // reasonable verse length
-    if (/(अध्याय|श्लोक|Chapter|Verse)/.test(line)) continue; // skip citation lines
-    // Hindi prose has many of these. Sanskrit has 0-2 max.
-    const hindiMarkers = (line.match(/(है|हैं|था|थे|की |के |का |और |में |से |को |पर |यह |वह |कि |जो |हम |आप |मैं )/g) || []).length;
-    if (hindiMarkers <= 2) {
+    if (!/[\u0900-\u097F]/.test(line)) continue;
+    if (line.length < 15 || line.length > 280) continue;
+    // Skip citation lines (English or Hindi)
+    if (/Chapter\s*\d+|Verse\s*\d+/i.test(line)) continue;
+    if (/(अध्याय\s*\d+.*श्लोक|श्लोक\s*\d+)/.test(line) && line.length < 60) continue;
+    // STRONG signal: contains ॥ verse end marker or || ASCII equivalent
+    const hasVerseMarker = /॥|\|\|/.test(line);
+    // OR has minimal Hindi prose markers
+    const hindiMarkers = (line.match(/(है|हैं|था|थे|की |के |का |और |में |से |को |पर |यह |वह |कि |जो |हम |आप |मैं |करना|हुआ|होता)/g) || []).length;
+    if (hasVerseMarker || hindiMarkers <= 2) {
       sanskrit = line;
       break;
     }
